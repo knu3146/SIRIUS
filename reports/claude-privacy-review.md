@@ -9,6 +9,8 @@
 
 ## 1. 범위와 한계
 
+Codex 추가 검증: 이후 `ml/test_handler_privacy.py`로 Python의 실제 HTTP 핸들러와 영상 전처리도 별도로 검사했다. 합성 환자명 메타데이터·합성 오류 경로·영상 본문을 응답이나 로그로 내보내지 않고, 외부 Host/Origin/Fetch-Site 및 잘못된 유형·길이를 분석 전에 거부하는지 확인했다. 전체 Python 테스트 24개가 통과했다. 아래의 "Python 미검토"는 Claude가 수행한 최초 검토의 범위를 뜻한다.
+
 읽은 것: `PRIVACY.md`, `index.html`, `server.js`, `.env.example`, `js/*.js`, `api/*.js`, `test/`, 보조로 `scripts/check.mjs`, `package.json`.
 
 읽지 않은 것(요청대로): 실제 `.env`/`.env.local`, `data/`, `datasets/`, 브라우저 저장소, 사용자 파일, 비밀키, 실제 MRI.

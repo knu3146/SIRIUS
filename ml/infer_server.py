@@ -159,6 +159,7 @@ def analyze(data: bytes) -> dict:
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "NeuriaML"
+    sys_version = ""
 
     def log_message(self, *args):   # 요청 내용은 남기지 않습니다
         pass
@@ -169,12 +170,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
     def _local_only(self):
         # 다른 웹사이트가 브라우저를 통해 이 포트를 두드리는 것을 막습니다
         if self.headers.get("Origin"):
+            return False
+        if self.headers.get("Sec-Fetch-Site") == "cross-site":
             return False
         return self.headers.get("Host", "") in (f"127.0.0.1:{PORT}", f"localhost:{PORT}")
 
