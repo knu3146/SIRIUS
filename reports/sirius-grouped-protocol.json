@@ -1,0 +1,10 @@
+{
+  "source_evaluation_sha256": "d52b0bc2fdb36c74ef67bd133518467f4048ca36fc59aa1a97db5704c29d03d9",
+  "source_audit_sha256": "7204e51d116ded2946eb74821577dd754e7511f8d355b7916ba6ce83438c5cff",
+  "fit_images": 3540,
+  "validation_images": 885,
+  "test_images_opened_or_copied": 0,
+  "split": "Same pHash-grouped fit/validation indices as earlier model comparisons",
+  "selection": "highest validation macro-F1 epoch; no test scoring for this training run",
+  "patient_level_independence_established": false
+}

@@ -15,6 +15,33 @@ test('개인정보 보호 모드는 원격 사이트에서 MRI 전송과 캔버�
   await assert.rejects(analyze({}), /이 컴퓨터의 분석 서버/);
 });
 
+test('나가기 후 완료된 JPEG 변환은 MRI 요청을 보내지 않는다', async () => {
+  let finish;
+  const isolated = vm.createContext({fetch(){assert.fail('cancelled image must not be sent');}});
+  vm.runInContext(readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8'), isolated);
+  isolated.heuristicAnalyze = () => ({});
+  const work = isolated.modelAnalyze({toBlob(callback){finish=callback;}});
+  isolated.cancelModelRequests();
+  finish({});
+  await assert.rejects(work,/취소/);
+});
+
+test('나가기는 이미 진행 중인 MRI 전송 요청도 중단한다', async () => {
+  let signal;
+  const isolated = vm.createContext({AbortController,setTimeout,clearTimeout,
+    fetch(url,options){signal=options.signal; return new Promise((resolve,reject)=>{
+      signal.addEventListener('abort',()=>reject(new Error('cancelled')),{once:true});
+    });}});
+  vm.runInContext(readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8'), isolated);
+  isolated.heuristicAnalyze = () => ({});
+  const work = isolated.modelAnalyze({toBlob(callback){callback({});}});
+  await Promise.resolve();
+  assert.ok(signal);
+  isolated.cancelModelRequests();
+  await assert.rejects(work,/cancelled/);
+  assert.equal(signal.aborted,true);
+});
+
 test('모델 응답은 네 클래스의 유효한 확률 분포여야 한다', () => {
   for (const probs of [[0, 0, 0, 0], [-.1, .3, .4, .4], [2, 0, 0, 0], [.2, .2, .2, .2], [NaN, .2, .3, .5], [.5, .5]]) {
     assert.throws(() => validate({ probs, regions: [] }));

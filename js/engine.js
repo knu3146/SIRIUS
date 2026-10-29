@@ -133,13 +133,23 @@ function validateModelResponse(j){
   };
 }
 
+let modelRequestVersion = 0;
+const modelRequests = new Set();
+function cancelModelRequests(){
+  modelRequestVersion++;
+  for(const controller of modelRequests) controller.abort();
+  modelRequests.clear();
+}
 async function modelAnalyze(canvas){
+  const requestVersion = modelRequestVersion;
   if(typeof CONFIG !== 'undefined' && CONFIG.privacy && !['localhost','127.0.0.1','[::1]'].includes(globalThis.location?.hostname))
     throw new Error('개인정보 보호 모드에서는 이 컴퓨터의 분석 서버만 사용할 수 있습니다.');
   const base = heuristicAnalyze(canvas);           // 화질 점검은 기존 계산을 그대로 사용
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+  if(requestVersion !== modelRequestVersion) throw new Error('분석이 취소되었습니다.');
   if(!blob) throw new Error('이미지 변환 실패');
   const ctl = new AbortController();
+  modelRequests.add(ctl);
   const timer = setTimeout(() => ctl.abort(), 60000);
   let j;
   try{
@@ -147,7 +157,7 @@ async function modelAnalyze(canvas){
                                             body:blob, signal:ctl.signal, cache:'no-store' });
     if(!r.ok) throw new Error('HTTP ' + r.status);
     j = validateModelResponse(await r.json());
-  } finally { clearTimeout(timer); }
+  } finally { clearTimeout(timer); modelRequests.delete(ctl); }
 
   const regions = j.regions
     .filter(p => [p.nx, p.ny, p.r, p.conf].every(Number.isFinite) && p.nx >= 0 && p.nx <= 1 && p.ny >= 0 && p.ny <= 1)

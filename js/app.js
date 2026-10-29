@@ -25,11 +25,20 @@ function enterApp(){
   resetIdle();
 }
 function logout(){
+  clearTimeout(idleTimer);
   cancelVaultWrites();
   cancelPendingImages();
   S.acc = null; S.masterRaw = null; S.masterKey = null; S.email = ''; S.name = '';
   S.scans = []; S.img = null; S.src = null; S.analysis = null; S.regions = []; S.guest = false;
   flow.purpose = null; flow.id = ''; flow.email = ''; flow.pw = ''; flow.acc = null;
+  if(typeof clearPending === 'function') clearPending();
+  if(typeof DemoMail !== 'undefined') DemoMail.boxes = Object.create(null);
+  if(typeof AuthBackend !== 'undefined'){ AuthBackend.tokens = {}; delete AuthBackend.regToken; }
+  for(const id of ['loginId','loginPw','suName','suId','suEmail','suPw','suPw2','lgCode','suCode','fiCode','fpCode','recKey','fileIn']){
+    const element = $(id);
+    if(element){ element.value = ''; element.textContent = ''; }
+  }
+  $('who').textContent = ''; $('acctState').innerHTML = '';
   try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
   ctx.clearRect(0,0,cv.width,cv.height);
   $('emptyState').hidden = false; $('orient').hidden = true;
@@ -41,7 +50,7 @@ function logout(){
 let idleTimer = null;
 function resetIdle(){
   clearTimeout(idleTimer);
-  if($('app').hidden || S.guest) return;
+  if($('app').hidden) return;
   idleTimer = setTimeout(logout, 10*60*1000);
 }
 ['pointerdown','keydown','wheel','touchstart'].forEach(ev => window.addEventListener(ev, resetIdle, {passive:true}));
@@ -131,9 +140,15 @@ $('ttsRate').oninput = e => { rate = +e.target.value; $('ttsRateVal').textConten
 function speak(text){
   if(!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
+  const privateMode = typeof CONFIG !== 'undefined' && CONFIG.privacy;
+  const v = speechSynthesis.getVoices().find(x=>x.lang && x.lang.startsWith('ko') && (!privateMode || x.localService === true));
+  if(privateMode && !v){
+    $('checkMsg').hidden = false;
+    $('checkMsg').textContent = '기기 내 한국어 음성이 없어 읽기 기능을 사용할 수 없습니다.';
+    return;
+  }
   const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g,''));
   u.lang = 'ko-KR'; u.rate = rate;
-  const v = speechSynthesis.getVoices().find(x=>x.lang && x.lang.startsWith('ko'));
   if(v) u.voice = v;
   speechSynthesis.speak(u);
 }
@@ -227,9 +242,11 @@ renderGlossary();
 $('engineBadge').textContent = '엔진 · ' + ENGINE.name;
 $('backendBadge').textContent = '인증 방식 확인 중…';
 AuthBackend.detect().then(mode => {
-  $('backendBadge').textContent = mode === 'server' ? '메일 인증' : '데모 인증';
+  $('backendBadge').textContent = CONFIG.privacy ? '개인정보 보호 모드' : mode === 'server' ? '메일 인증' : '데모 인증';
 });
-if(!SUBTLE){
+if(CONFIG.privacy){
+  showLanding();
+} else if(!SUBTLE){
   $('scr-login').innerHTML = '<h2>안전하게 저장할 수 없는 환경입니다</h2>'
     + '<p class="lede">이 브라우저에서는 암호화 기능(Web Crypto)을 쓸 수 없어 계정 기능을 켜지 않습니다. 분석 기능만 사용할 수 있습니다.</p>'
     + '<button class="btn primary full" id="goGuest2">저장 없이 사용하기</button>';

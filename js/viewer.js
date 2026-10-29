@@ -117,6 +117,7 @@ function draw(){
    ═══════════════════════════════════════════════════════════ */
 let imageSeq = 0;
 function cancelPendingImages(){
+  if(typeof cancelModelRequests === 'function') cancelModelRequests();
   imageSeq++;
   analysisSeq++;
   document.body.style.cursor = '';

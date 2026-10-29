@@ -127,11 +127,13 @@ document.querySelectorAll('[data-soon]').forEach(b => b.onclick = () => {
 /* ── 아이디 기억하기 ─────────────────────────────────────── */
 const ID_KEY = 'neuria-last-id';
 (function initRememberId(){
+  if(CONFIG.privacy) return;
   let v = null;
   try{ v = localStorage.getItem(ID_KEY); }catch(e){}
   if(v){ $('loginId').value = v; $('rememberId').checked = true; }
 })();
 $('btnLogin').addEventListener('click', () => {
+  if(CONFIG.privacy) return;
   try{
     if($('rememberId').checked) localStorage.setItem(ID_KEY, $('loginId').value.trim());
     else localStorage.removeItem(ID_KEY);
