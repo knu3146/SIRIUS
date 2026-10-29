@@ -83,7 +83,7 @@ def main():
         for key, value in config['training_settings'].items():
             command.extend([f'--{key}', str(value)])
         print(f'Training SiriusNet grouped fold {fold}/5', flush=True)
-        subprocess.run(command, check=True,
+        subprocess.run(command, check=True, stdout=sys.stdout, stderr=sys.stderr,
                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         results.append(result(destination, fold))
         (args.output / 'progress.json').write_text(json.dumps(config, indent=2), encoding='utf-8')

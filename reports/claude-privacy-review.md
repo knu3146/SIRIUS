@@ -181,7 +181,7 @@ F-10~F-13은 정적 읽기 기준의 관찰이며 기본(익명) 모드에는 �
 +++ b/server.js
 @@ -47,6 +47,7 @@
  }
- 
+
  function ensureEnvFile(){
 +  if(process.env.ENABLE_EMAIL_AUTH !== 'true') return;   // 기본 익명 모드: 비밀키 파일을 만들지 않음
    const secret = crypto.randomBytes(32).toString('base64url');
@@ -194,7 +194,7 @@ F-10~F-13은 정적 읽기 기준의 관찰이며 기본(익명) 모드에는 �
 +const PUBLIC_FILES = new Set(['index.html']);
 +for(const m of fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').matchAll(/(?:src|href)="((?:js|css)\/[A-Za-z0-9_.-]+)"/g)) PUBLIC_FILES.add(m[1]);
  const BLOCKED = [/^\.env/i, /^node_modules/i, /^\.git/i, /^api[\\/]/i, /^data(?:sets)?[\\/]/i, /^server\.js$/i, /^ml[\\/]/i, /^_backup/i, /^train[\\/]/i, /^scripts[\\/]/i, /^test[\\/]/i];
- 
+
  function serveStatic(req, res, pathname){
 @@ -123,7 +126,7 @@
    if(rel.split(/[\\/]/).some(segment => segment.startsWith('.')) || BLOCKED.some(re => re.test(rel)))
@@ -203,6 +203,6 @@ F-10~F-13은 정적 읽기 기준의 관찰이며 기본(익명) 모드에는 �
 -  if(rel !== 'index.html' && !/^(?:js[\\/][A-Za-z0-9_-]+\.js|css[\\/]style\.css)$/.test(rel))
 +  if(!PUBLIC_FILES.has(rel.replace(/\\/g, '/')))
      return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
- 
+
    const file = path.join(ROOT, rel);
 ```
