@@ -2,7 +2,8 @@
 chcp 65001 >nul
 cd /d "%~dp0ml"
 set PYCMD=
-where py >nul 2>nul && set PYCMD=py -3
+if exist "%~dp0.venv\Scripts\python.exe" set PYCMD="%~dp0.venv\Scripts\python.exe"
+if not defined PYCMD where py >nul 2>nul && set PYCMD=py -3
 if not defined PYCMD where python >nul 2>nul && set PYCMD=python
 if not defined PYCMD (
   echo Python 3.11 이상이 필요합니다. https://www.python.org/downloads/ 에서 설치한 뒤 다시 실행하세요.

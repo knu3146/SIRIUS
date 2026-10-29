@@ -16,7 +16,7 @@ const DEMO_META = {
   confNote:'좌우 대칭 비교로 계산한 값입니다. 진단 확률이 아닙니다.'
 };
 const MODEL_META = {
-  name:'학습 모델 v0.2 (HOG+랜덤포레스트, 시연용)',
+  name:'학습 모델 (시연용)',
   probsTitle:'참고용 유형 추정 (학습 모델 · 시연용)',
   confNote:'모델이 고른 유형의 확률로 계산한 값입니다. 진단 확률이 아니며, 표시된 원은 병변 경계가 아니라 모델이 주목한 영역입니다.'
 };
@@ -119,6 +119,20 @@ function setEngine(meta){
 }
 const clampTo = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+function validateModelResponse(j){
+  if(!j || !Array.isArray(j.probs) || j.probs.length !== CLASSES.length ||
+     !j.probs.every(p => Number.isFinite(p) && p >= 0 && p <= 1) ||
+     !Array.isArray(j.regions)) throw new Error('응답 형식 오류');
+  const total = j.probs.reduce((a, b) => a + b, 0);
+  if(Math.abs(total - 1) > .02) throw new Error('모델 확률 합계 오류');
+  return {
+    ...j,
+    probs: j.probs.map(p => p / total),
+    regions: j.regions.filter(p => p && typeof p === 'object'),
+    model: typeof j.model === 'string' && j.model.trim() ? j.model.trim().slice(0, 160) : MODEL_META.name
+  };
+}
+
 async function modelAnalyze(canvas){
   const base = heuristicAnalyze(canvas);           // 화질 점검은 기존 계산을 그대로 사용
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
@@ -130,28 +144,25 @@ async function modelAnalyze(canvas){
     const r = await fetch('/api/analyze', { method:'POST', headers:{'Content-Type':'image/jpeg'},
                                             body:blob, signal:ctl.signal, cache:'no-store' });
     if(!r.ok) throw new Error('HTTP ' + r.status);
-    j = await r.json();
+    j = validateModelResponse(await r.json());
   } finally { clearTimeout(timer); }
 
-  if(!j || !Array.isArray(j.probs) || j.probs.length !== CLASSES.length ||
-     !j.probs.every(Number.isFinite) || !Array.isArray(j.regions))
-    throw new Error('응답 형식 오류');
-  const regions = j.regions.slice(0, 3)
+  const regions = j.regions
     .filter(p => [p.nx, p.ny, p.r, p.conf].every(Number.isFinite) && p.nx >= 0 && p.nx <= 1 && p.ny >= 0 && p.ny <= 1)
+    .slice(0, 3)
     .map((p, i) => ({     // 사진이 어느 방향 단면인지 모르므로 뇌엽 이름은 붙이지 않습니다
-      nx:p.nx, ny:p.ny, r:clampTo(p.r, .045, .22), area:Math.round(p.area) || 0, score:+p.score || 0,
+      nx:p.nx, ny:p.ny, r:clampTo(p.r, .045, .22),
+      area:Number.isFinite(p.area) ? Math.max(0, Math.round(p.area)) : 0,
+      score:Number.isFinite(p.score) ? Math.max(0, p.score) : 0,
       conf:clampTo(p.conf, 0, .97), name:'주목 영역 ' + 'ABC'[i], kind:'model'
     }));
-  return { probs:j.probs, regions, quality:base.quality, kind:'model' };
+  return { probs:j.probs, regions, quality:base.quality, kind:'model', model:j.model };
 }
 
 async function analyzeImage(canvas){
   try{
-    const a = await modelAnalyze(canvas);
-    setEngine(MODEL_META);
-    return a;
+    return await modelAnalyze(canvas);
   }catch(e){
-    setEngine(DEMO_META);
     return heuristicAnalyze(canvas);
   }
 }

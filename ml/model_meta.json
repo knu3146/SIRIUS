@@ -1,5 +1,5 @@
 {
-  "name": "HOG+RandomForest 시연용 v0.2",
+  "name": "HOG+svm-c10 candidate v0.3 (demonstration only)",
   "classes": [
     "glioma_tumor",
     "meningioma_tumor",
@@ -7,8 +7,12 @@
     "no_tumor"
   ],
   "sklearn_version": "1.9.1",
-  "sha256": "ccba383c9d3c74b9fcb027a8b88783b0664c67042ba2b8fde1ff121394426956",
-  "test_accuracy": 0.727,
-  "trained_on": "Brain Tumor Classification MRI (4-class, 분류 라벨만, 병변 마스크 없음)",
-  "trained_at": "2026-10-29"
+  "sha256": "3df46428c4e964d6780215d4471b0e4a0b94a88f5c3efa78a2eecab14a1efa7d",
+  "test_accuracy": 0.9513081395348837,
+  "trained_at": "2026-10-29T12:27:24.789857+00:00",
+  "trained_on": "masoudnickparvar/brain-tumor-mri-dataset",
+  "validation_macro_f1": 0.9062251698146094,
+  "evaluation_protocol": "pHash <=4 train/test exclusion and grouped validation",
+  "clinical_validation": false,
+  "test_status": "Exploratory benchmark; test previously inspected and patient-level independence not established."
 }

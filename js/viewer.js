@@ -115,9 +115,18 @@ function draw(){
 /* ═══════════════════════════════════════════════════════════
    J. 이미지 처리
    ═══════════════════════════════════════════════════════════ */
+let imageSeq = 0;
+function cancelPendingImages(){
+  imageSeq++;
+  analysisSeq++;
+  document.body.style.cursor = '';
+}
 function loadCanvas(canvas, seriesLabel){
+  const seq = ++imageSeq;
+  analysisSeq++;
   const img = new Image();
   img.onload = () => {
+    if(seq !== imageSeq || $('app').hidden) return;
     S.img = img; S.src = canvas;
     $('emptyState').hidden = true; $('orient').hidden = false;
     $('fbSeries').textContent = seriesLabel;
@@ -130,11 +139,15 @@ function loadCanvas(canvas, seriesLabel){
 function loadFile(file){
   if(!file || !file.type.startsWith('image/')) return;
   if(file.size > 25*1024*1024){ alert('25MB 이하 이미지만 열 수 있습니다.'); return; }
+  const seq = ++imageSeq;
+  analysisSeq++;
   const fr = new FileReader();
   fr.onload = e => {
+    if(seq !== imageSeq || $('app').hidden) return;
     const im = new Image();
     im.onerror = () => alert('이미지를 읽을 수 없습니다. JPG 또는 PNG 파일인지 확인해 주세요.');
     im.onload = () => {
+      if(seq !== imageSeq || $('app').hidden) return;
       const c = document.createElement('canvas');
       const m = Math.min(1, 900/Math.max(im.width, im.height));
       c.width = Math.round(im.width*m); c.height = Math.round(im.height*m);
@@ -151,8 +164,13 @@ async function runAnalysis(){
   document.body.style.cursor = 'progress';
   let a;
   try{ a = await ENGINE.analyze(src); }
-  finally{ document.body.style.cursor = ''; }
+  catch(e){
+    if(seq === analysisSeq && src === S.src) alert('이미지를 분석하지 못했습니다. 다른 JPG 또는 PNG 이미지로 다시 시도해 주세요.');
+    return;
+  }
+  finally{ if(seq === analysisSeq) document.body.style.cursor = ''; }
   if(seq !== analysisSeq || src !== S.src) return;   // 분석 중에 다른 영상이 열렸으면 이 결과는 버림
+  setEngine(a.kind === 'model' ? { ...MODEL_META, name:a.model || MODEL_META.name } : DEMO_META);
   S.analysis = a; S.regions = a.regions;
   S.compared = compareWithPrev(S.regions);
   S.simple = false;

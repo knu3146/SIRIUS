@@ -112,7 +112,7 @@ const MIME = {
   '.woff2':'font/woff2', '.map':'application/json; charset=utf-8', '.md':'text/markdown; charset=utf-8'
 };
 // 밖으로 새어 나가면 안 되는 것들
-const BLOCKED = [/^\.env/i, /^node_modules/i, /^\.git/i, /^api[\\/]/i, /^data[\\/]/i, /^server\.js$/i, /^ml[\\/]/i, /^_backup/i, /^train[\\/]/i, /^scripts[\\/]/i, /^test[\\/]/i];
+const BLOCKED = [/^\.env/i, /^node_modules/i, /^\.git/i, /^api[\\/]/i, /^data(?:sets)?[\\/]/i, /^server\.js$/i, /^ml[\\/]/i, /^_backup/i, /^train[\\/]/i, /^scripts[\\/]/i, /^test[\\/]/i];
 
 function serveStatic(req, res, pathname){
   let rel;
@@ -120,7 +120,8 @@ function serveStatic(req, res, pathname){
   catch { return send(res, 400, 'text/plain; charset=utf-8', '잘못된 URL입니다.'); }
   if(rel.endsWith('/')) rel += 'index.html';
   rel = path.normalize(rel).replace(/^(\.\.[\\/])+/, '');
-  if(BLOCKED.some(re => re.test(rel))) return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
+  if(rel.split(/[\\/]/).some(segment => segment.startsWith('.')) || BLOCKED.some(re => re.test(rel)))
+    return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
 
   const file = path.join(ROOT, rel);
   if(!file.startsWith(ROOT + path.sep) && file !== ROOT)
@@ -158,7 +159,12 @@ const ROUTES = {
 };
 async function serveApi(req, res, modPath){
   const chunks = [];
-  for await (const c of req) chunks.push(c);
+  let size = 0;
+  for await (const c of req){
+    size += c.length;
+    if(size > 16 * 1024) return send(res, 413, 'application/json; charset=utf-8', '{"error":"요청이 너무 큽니다."}');
+    chunks.push(c);
+  }
   try{ req.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); }
   catch(e){ req.body = {}; }
 

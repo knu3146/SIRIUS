@@ -32,6 +32,7 @@ function enterApp(){
   resetIdle();
 }
 function logout(){
+  cancelPendingImages();
   S.acc = null; S.masterRaw = null; S.masterKey = null; S.email = ''; S.name = '';
   S.scans = []; S.img = null; S.src = null; S.analysis = null; S.regions = []; S.guest = false;
   flow.purpose = null; flow.id = ''; flow.email = ''; flow.pw = ''; flow.acc = null;
@@ -158,18 +159,21 @@ $('copyQ').onclick = async e => {
 };
 
 $('saveScan').onclick = async () => {
-  if(!S.analysis || S.guest) return;
+  if(!S.analysis || !S.src || S.guest || $('saveScan').disabled) return;
+  $('saveScan').disabled = true;
+  const previousScans = S.scans.slice();
   S.scans.push({
     date: new Date().toLocaleString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}),
     thumb: thumbOf(S.src, 200),
-    regions: S.regions.map(r=>({nx:r.nx, ny:r.ny, r:r.r, area:r.area, status:r.status, name:r.name})),
+    regions: S.regions.map(r=>({nx:r.nx, ny:r.ny, r:r.r, area:r.area, status:r.status, name:r.name, conf:r.conf, kind:r.kind, change:r.change})),
     probs: S.analysis.probs,
     kind: S.analysis.kind,
+    model: S.analysis.model,
     cost: +($('cost').value || 0)
   });
   if(S.scans.length > 8) S.scans.shift();
   const ok = await saveVault();
-  if(!ok){ S.scans.pop(); alert('저장 공간이 부족해 기록하지 못했습니다. 오래된 회차를 지운 뒤 다시 시도해 주세요.'); return; }
+  if(!ok){ S.scans = previousScans; $('saveScan').disabled = false; alert('저장 공간이 부족해 기록하지 못했습니다. 오래된 회차를 지운 뒤 다시 시도해 주세요.'); return; }
   renderTimeline(); renderAccount();
   $('cost').value = '';
   $('scanLabel').textContent = `${S.scans.length}차로 저장됨`;
@@ -180,13 +184,16 @@ $('tlScroll').addEventListener('click', e => {
   const s = S.scans[+c.dataset.i]; if(!s) return;
   const im = new Image();
   im.onload = () => {
+    if(!S.scans.includes(s)) return;
     S.img = im; S.regions = s.regions;
-    S.analysis = {probs:s.probs, regions:s.regions, quality:'저장본', kind:s.kind};
-    S.compared = true;
+    S.src = null;
+    S.analysis = {probs:s.probs, regions:s.regions, quality:'저장본', kind:s.kind, model:s.model};
+    S.compared = false;
+    setEngine(s.kind === 'model' ? { ...MODEL_META, name:s.model || MODEL_META.name } : DEMO_META);
     $('emptyState').hidden = true; $('orient').hidden = false;
     $('fbSeries').textContent = `SERIES 저장본 #${+c.dataset.i+1}`;
     $('fbSize').textContent = `${im.width} × ${im.height}`;
-    S.regions.forEach(r=>{ if(!r.change) r.change='저장된 기록'; if(!r.conf) r.conf=.5; });
+    S.regions.forEach(r=>{ if(!r.change) r.change='저장된 기록'; if(!Number.isFinite(r.conf)) r.conf=0; });
     renderAll();
     document.querySelectorAll('.tlcard').forEach(x=>x.setAttribute('aria-current', String(x===c)));
   };
@@ -195,7 +202,10 @@ $('tlScroll').addEventListener('click', e => {
 $('clearScans').onclick = async () => {
   if(!S.scans.length) return;
   if(!confirm('저장된 회차 기록을 모두 지웁니다. 되돌릴 수 없습니다.')) return;
-  S.scans = []; await saveVault(); renderTimeline(); renderAccount();
+  const previousScans = S.scans;
+  S.scans = [];
+  if(!await saveVault()){ S.scans = previousScans; alert('기록 삭제를 저장하지 못했습니다. 다시 시도해 주세요.'); }
+  renderTimeline(); renderAccount();
 };
 
 $('fsSet').onclick = e => {

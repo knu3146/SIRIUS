@@ -155,6 +155,9 @@ async function sendViaResend(to, {subject, html, text}){
 }
 
 export function readBody(req){
-  if(req.body && typeof req.body === 'object') return req.body;
-  try{ return JSON.parse(req.body || '{}'); }catch(e){ return {}; }
+  let body = req.body;
+  if(typeof body === 'string'){
+    try{ body = JSON.parse(body); }catch(e){ return {}; }
+  }
+  return body && typeof body === 'object' && !Array.isArray(body) ? body : {};
 }

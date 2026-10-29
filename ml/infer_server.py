@@ -20,11 +20,12 @@ import sklearn
 from PIL import Image
 from skimage.filters import gaussian
 
-from features import IMG_SIZE, NO_TUMOR_IDX, hog_feature, to_gray
+from features import CLASS_DIRS, IMG_SIZE, NO_TUMOR_IDX, hog_feature, to_gray
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("ML_PORT", "5001"))
 HERE = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.environ.get("MODEL_DIR", HERE)
 MAX_BODY = 8 * 1024 * 1024
 MAX_PIXELS = 40_000_000
 PATCH, STRIDE = 24, 8          # 가려 보는 블록 크기·간격 (128x128 기준)
@@ -35,10 +36,12 @@ LOCK = threading.Lock()
 
 
 def load_model():
-    meta_path = os.path.join(HERE, "model_meta.json")
-    model_path = os.path.join(HERE, "model_rf.joblib")
+    meta_path = os.path.join(MODEL_DIR, "model_meta.json")
+    model_path = os.path.join(MODEL_DIR, "model_rf.joblib")
     with open(meta_path, encoding="utf-8") as fh:
         meta = json.load(fh)
+    if meta.get("classes") != CLASS_DIRS:
+        sys.exit("모델 클래스 순서가 웹앱과 일치하지 않습니다.")
     if meta["sklearn_version"] != sklearn.__version__:
         sys.exit(
             f"scikit-learn 버전이 다릅니다 (모델 {meta['sklearn_version']} / 설치 {sklearn.__version__}).\n"
@@ -48,10 +51,16 @@ def load_model():
     with open(model_path, "rb") as fh:
         if hashlib.sha256(fh.read()).hexdigest() != meta["sha256"]:
             sys.exit("model_rf.joblib 이 model_meta.json 과 일치하지 않습니다. 파일이 바뀌었거나 손상됐습니다.")
-    return joblib.load(model_path), meta
+    model = joblib.load(model_path)
+    if not np.array_equal(model.classes_, np.arange(len(CLASS_DIRS))):
+        sys.exit("모델 출력 클래스가 4개 유형의 순서와 일치하지 않습니다.")
+    expected = len(hog_feature(np.zeros((IMG_SIZE, IMG_SIZE))))
+    if model.n_features_in_ != expected:
+        sys.exit("모델 특징 추출 설정이 현재 코드와 일치하지 않습니다.")
+    return model, meta
 
 
-MODEL, META = load_model()
+MODEL, META = None, None
 
 
 def attention_map(gray, cls, base_p):
@@ -113,12 +122,12 @@ def find_regions(gray, cls, base_p):
 
 
 def analyze(data: bytes) -> dict:
-    img = Image.open(io.BytesIO(data))
-    if img.format not in ("JPEG", "PNG"):
-        raise ValueError("unsupported format")
-    if img.width * img.height > MAX_PIXELS:
-        raise ValueError("too large")
-    gray = to_gray(img)
+    with Image.open(io.BytesIO(data)) as img:
+        if img.format not in ("JPEG", "PNG"):
+            raise ValueError("unsupported format")
+        if img.width * img.height > MAX_PIXELS:
+            raise ValueError("too large")
+        gray = to_gray(img)
     probs = MODEL.predict_proba(hog_feature(gray)[None, :])[0]
     top = int(np.argmax(probs))
     regions = [] if top == NO_TUMOR_IDX else find_regions(gray, top, float(probs[top]))
@@ -176,6 +185,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    global MODEL, META
+    MODEL, META = load_model()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"  NEURIA 분석 서버  http://{HOST}:{PORT}  ·  {META['name']} (test 정확도 {META['test_accuracy']:.1%})")
     print("  종료  Ctrl + C")

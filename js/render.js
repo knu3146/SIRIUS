@@ -6,19 +6,20 @@
 function renderAll(){
   const a = S.analysis; if(!a) return;
   const R = S.regions;
+  const attentionLabel = a.kind === 'model' ? '모델 주목도' : '비대칭 점수';
   $('vTitle').textContent = R.length
     ? `눈여겨볼 곳 ${R.length}군데 — 가장 뚜렷한 곳은 ${R[0].name}`
-    : '한쪽에만 두드러지는 부분은 찾지 못했습니다';
-  $('vConf').textContent = R.length ? `최고 신뢰도 ${(R[0].conf*100).toFixed(0)}% · ${ENGINE.name}` : ENGINE.name;
+    : a.kind === 'model' ? '모델 주목 영역이 뚜렷하지 않습니다' : '한쪽에만 두드러지는 부분은 찾지 못했습니다';
+  $('vConf').textContent = R.length ? `${attentionLabel} ${(R[0].conf*100).toFixed(0)}% · ${ENGINE.name}` : ENGINE.name;
   $('report').innerHTML = buildReport(a, R, S.compared, S.simple).map(p=>`<p>${linkTerms(p)}</p>`).join('');
   $('findings').innerHTML = R.length ? R.map((r,i)=>`
     <div class="finding">
       <div class="top">
         <span class="num" style="background:var(${COLORVAR[r.status]})">${i+1}</span>
-        <div><div class="nm">${esc(r.name)}</div><div class="ds">${esc(r.change)} · 신뢰도 ${(r.conf*100).toFixed(0)}%</div></div>
+        <div><div class="nm">${esc(r.name)}</div><div class="ds">${esc(r.change)} · ${attentionLabel} ${(r.conf*100).toFixed(0)}%</div></div>
         <span class="tag t-${r.status}">${STATUS_KO[r.status]}</span>
       </div>
-    </div>`).join('') : '<p class="tiny">한쪽에만 두드러지는 부위를 찾지 못했습니다.</p>';
+    </div>`).join('') : `<p class="tiny">${a.kind === 'model' ? '모델 주목 영역이 뚜렷하지 않습니다.' : '한쪽에만 두드러지는 부위를 찾지 못했습니다.'}</p>`;
 
   // 분석 신뢰도 막대
   const top = R.length ? R[0].conf : 0;
@@ -37,7 +38,7 @@ function renderAll(){
     </div>`).join('');
   $('questions').innerHTML = buildQuestions(a, R, S.compared).map(q=>`<li>${esc(q)}</li>`).join('');
   $('checkBox').hidden = false;
-  $('saveScan').disabled = S.guest;
+  $('saveScan').disabled = S.guest || !S.src;
   $('scanLabel').textContent = `${S.scans.length+1}차 분석 · ${new Date().toLocaleDateString('ko-KR')}`;
   $('fbQuality').textContent = `품질 ${a.quality}`;
   renderGlossary();

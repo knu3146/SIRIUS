@@ -52,6 +52,8 @@ GMAIL_APP_PASSWORD=your-app-password
 
 기본 분석은 브라우저의 데모 휴리스틱입니다. 학습 모델이 준비되어 있으면 다음 흐름으로 분석합니다.
 
+현재 로컬 기본 모델은 추가 학습한 HOG+SVM 후보입니다. 이전 랜덤포레스트와 새 실험의 평가 조건이 달라 정확도 수치를 직접 비교하지 않습니다. 실제 평가 조건과 한계는 `TRAINING_PROGRESS.md`에 기록했습니다.
+
 ```text
 브라우저 → /api/analyze → Node.js → 127.0.0.1:5001 Python
 ```
@@ -111,3 +113,25 @@ git push origin main
 ```
 
 다른 컴퓨터 또는 GitHub에서도 수정했다면 로컬 작업을 시작하기 전에 깨끗한 작업 폴더에서 `git pull --ff-only`로 동기화하세요. 충돌이 생기면 강제 푸시하지 말고 변경을 비교해 병합하세요.
+
+## 재현 가능한 추가 학습
+
+현재 서비스 모델을 덮어쓰지 않고 후보 모델을 별도 디렉터리에 학습할 수 있습니다.
+
+```sh
+python ml/audit_dataset.py datasets/brain-tumor-7023 --output datasets/audit-7023.json
+python ml/train_candidates.py datasets/brain-tumor-7023 --output ml/experiments/new-run --source masoudnickparvar/brain-tumor-mri-dataset --audit datasets/audit-7023.json
+```
+
+감사 파일을 지정하면 pHash 거리 4 이하의 유사 이미지를 학습·테스트 사이에서 제외하고, 학습·검증도 유사 이미지 그룹 단위로 나눕니다. 모델은 검증 macro-F1로 선택합니다. 환자 식별자가 없는 공개 이미지이므로 환자 단위 독립성은 보장하지 못합니다. 같은 테스트를 여러 실험에서 다시 본 결과는 탐색 결과로 구분해야 합니다.
+
+후보를 기존 모델과 분리해 실행하려면 PowerShell에서:
+
+```powershell
+$env:MODEL_DIR = 'C:\neuro\ml\experiments\new-run'
+.\.venv\Scripts\python.exe ml/infer_server.py
+```
+
+`MODEL_DIR`에는 해당 실험의 모델 파일과 메타데이터가 함께 있어야 합니다. 기본 웹앱과 연결하려면 기존 분석 서버를 종료하고 후보 서버를 실행하세요. `start-ml.bat`은 프로젝트의 `.venv`가 있으면 우선 사용합니다.
+
+MobileNet 특징 기반 실험은 선택 기능입니다. CPU PyTorch를 설치한 후 `ml/train_transfer.py`를 사용합니다. MRI로 학습되는 부분은 분류 헤드이며, CNN 본체는 ImageNet 사전학습 상태로 고정합니다. 자세한 실제 결과와 한계는 [학습 작업 기록](TRAINING_PROGRESS.md)을 확인하세요. 원본 영상·가상환경·가중치·전체 실험 산출물은 Git에 포함하지 않습니다.

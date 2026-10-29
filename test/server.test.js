@@ -38,11 +38,12 @@ test('로컬 서버: 화면, 상태, 비공개 경로, 잘못된 URL, 분석 요
     assert.ok(ready, logs);
     assert.deepEqual(await (await fetch(`${base}/api/health`)).json(), { ok: true, mail: false });
     assert.equal((await fetch(base)).status, 200);
-    for (const route of ['/.env.local', '/ml/model_rf.joblib', '/data/registry.json', '/train/neuria_train.ipynb']) {
+    for (const route of ['/.env.local', '/ml/model_rf.joblib', '/data/registry.json', '/train/neuria_train.ipynb', '/.venv/pyvenv.cfg', '/.cache-models/weights.pth', '/datasets/example.jpg']) {
       assert.equal((await fetch(base + route)).status, 403, route);
     }
     assert.equal((await fetch(`${base}/%ZZ`)).status, 400);
     assert.equal((await fetch(`${base}/api/health`)).status, 200);
+    assert.equal((await fetch(`${base}/api/check-id`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(20 * 1024) })).status, 413);
     assert.equal((await fetch(`${base}/api/analyze`)).status, 405);
     assert.equal((await fetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'x' })).status, 415);
     assert.equal((await fetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'image/png', Origin: 'https://example.com' }, body: 'x' })).status, 403);

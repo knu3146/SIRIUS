@@ -21,3 +21,6 @@ venv/
 *.pth
 datasets/
 kaggle.json
+.cache-models/
+*.npz
+ml/experiments/
