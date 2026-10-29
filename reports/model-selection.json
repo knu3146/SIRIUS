@@ -1,0 +1,34 @@
+{
+  "rule": "highest mean grouped training CV macro_f1",
+  "test_scores_used_for_selection": false,
+  "folds": 5,
+  "source_manifest_sha256": "d52b0bc2fdb36c74ef67bd133518467f4048ca36fc59aa1a97db5704c29d03d9",
+  "models": {
+    "run-004-grouped": {
+      "mean_macro_f1": 0.9165502422178665,
+      "std_macro_f1": 0.007953611731129805,
+      "procedure": "fixed HOG/SVM C10"
+    },
+    "run-006-finetune": {
+      "mean_macro_f1": 0.9299192759882076,
+      "std_macro_f1": 0.009519487562304321,
+      "procedure": "best validation epoch within each fold"
+    },
+    "run-005-grouped-transfer": {
+      "mean_macro_f1": 0.9210399518266836,
+      "std_macro_f1": 0.007591482427307239,
+      "procedure": "fixed CNN features + logistic head C0.1"
+    },
+    "run-007-efficientnet": {
+      "mean_macro_f1": 0.9307016102071556,
+      "std_macro_f1": 0.010224946778477214,
+      "procedure": "fixed CNN features + logistic head C0.1"
+    }
+  },
+  "selected_experiment": "run-007-efficientnet",
+  "limitations": [
+    "Small differences between CNN candidates do not demonstrate statistical superiority.",
+    "Epoch and architecture selection used previously inspected internal validation groups.",
+    "Patient-level independence and clinical performance remain unverified."
+  ]
+}

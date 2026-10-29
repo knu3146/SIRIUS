@@ -58,7 +58,12 @@ def extract(items):
 def metrics(model, x, y):
     # Match the deployed inference path, including calibrated SVM probabilities.
     probs = model.predict_proba(x)
-    pred = model.classes_[np.argmax(probs, axis=1)]
+    return probability_metrics(y, probs, model.classes_)
+
+
+def probability_metrics(y, probs, classes=None):
+    classes = np.arange(4) if classes is None else np.asarray(classes)
+    pred = classes[np.argmax(probs, axis=1)]
     return {
         'accuracy': float(accuracy_score(y, pred)),
         'balanced_accuracy': float(balanced_accuracy_score(y, pred)),
@@ -99,14 +104,14 @@ def perceptual_groups(values, threshold=4):
     return np.asarray([find(i) for i in range(len(values))])
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('dataset', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--source', default='sartajbhuvaji/brain-tumor-classification-mri')
+    parser.add_argument('--source', default='local MRI dataset; source not specified')
     parser.add_argument('--exclude-tested-manifest', type=Path)
     parser.add_argument('--audit', type=Path, help='Use pHash <=4 exclusion and grouped validation from audit_dataset.py')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.output.exists():
         raise ValueError('Use a new output directory; previous experiments must be preserved')
     start = time.time()
@@ -188,6 +193,7 @@ def main():
         'seed': 42, 'validation': scores, 'test': test_result,
         'counts': {'train_raw': len(train_raw), 'train_unique_clean': len(train), 'fit': len(fit), 'validation': len(val), 'test_raw': len(test_raw), 'test_unique': len(test), 'train_test_duplicates_removed': len(overlap), 'perceptual_train_test_exclusions': near_removed, 'previously_tested_hashes_excluded': len(previously_tested)},
         'validation_split': 'perceptual hash grouped' if phashes is not None else 'stratified image split',
+        'split_indices': {'fit': fit.tolist(), 'validation': val.tolist()},
         'limitations': ['Image-level splits; patient identities are unavailable, so patient-level independence is not established.', 'Exact model-input duplicates removed; perceptual filtering applied only if --audit was supplied. Near-duplicates may remain.', 'Test data evaluated after validation selection; repeated experiments on the same test are exploratory, not independent external validation.'],
         'elapsed_seconds': time.time() - start,
         'manifest': {split: [{'path': r[0], 'label': r[1], 'input_sha256': r[2]} for r in records] for split, records in [('train', train), ('test', test)]},

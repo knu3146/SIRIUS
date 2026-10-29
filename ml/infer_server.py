@@ -33,6 +33,11 @@ MIN_ATTENTION = 0.005          # 이보다 약하게 반응하면 위치를 표�
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 LOCK = threading.Lock()
+CNN_ASSETS = {
+    'mobilenet_v3_small': ['classifier.joblib', 'backbone.pth'],
+    'mobilenet_v3_small_finetuned': ['model.pth'],
+    'efficientnet_b0': ['classifier.joblib', 'backbone.pth'],
+}
 
 
 def load_model():
@@ -42,11 +47,23 @@ def load_model():
         meta = json.load(fh)
     if meta.get("classes") != CLASS_DIRS:
         sys.exit("모델 클래스 순서가 웹앱과 일치하지 않습니다.")
-    if meta["sklearn_version"] != sklearn.__version__:
+    architecture = meta.get('architecture')
+    if architecture and architecture not in CNN_ASSETS:
+        sys.exit('Unsupported model architecture')
+    if architecture != 'mobilenet_v3_small_finetuned' and meta.get("sklearn_version") != sklearn.__version__:
         sys.exit(
-            f"scikit-learn 버전이 다릅니다 (모델 {meta['sklearn_version']} / 설치 {sklearn.__version__}).\n"
+            f"scikit-learn 버전이 다릅니다 (모델 {meta.get('sklearn_version', '정보 없음')} / 설치 {sklearn.__version__}).\n"
             "  pip install -r requirements.txt  를 다시 실행하세요."
         )
+    if architecture in CNN_ASSETS:
+        for filename in CNN_ASSETS[architecture]:
+            expected = meta.get('files_sha256', {}).get(filename)
+            with open(os.path.join(MODEL_DIR, filename), 'rb') as fh:
+                if not expected or hashlib.sha256(fh.read()).hexdigest() != expected:
+                    sys.exit(f'{filename} does not match model metadata')
+        from cnn_backend import MobileClassifier, TorchMRIClassifier
+        backend = TorchMRIClassifier if architecture == 'mobilenet_v3_small_finetuned' else MobileClassifier
+        return backend(MODEL_DIR, meta), meta
     # joblib 파일은 불러올 때 코드가 실행될 수 있어, 배포된 파일과 같은지 먼저 확인합니다.
     with open(model_path, "rb") as fh:
         if hashlib.sha256(fh.read()).hexdigest() != meta["sha256"]:
@@ -84,8 +101,9 @@ def attention_map(gray, cls, base_p):
     return heat
 
 
-def find_regions(gray, cls, base_p):
-    heat = attention_map(gray, cls, base_p)
+def find_regions(gray, cls, base_p, heat=None):
+    if heat is None:
+        heat = attention_map(gray, cls, base_p)
     hmax = float(heat.max())
     if hmax < MIN_ATTENTION:
         return []
@@ -128,6 +146,11 @@ def analyze(data: bytes) -> dict:
         if img.width * img.height > MAX_PIXELS:
             raise ValueError("too large")
         gray = to_gray(img)
+        if META.get('architecture') in CNN_ASSETS:
+            probs, heat = MODEL.predict_image(img)
+            top = int(np.argmax(probs))
+            regions = [] if heat is None else find_regions(gray, top, float(probs[top]), heat=heat)
+            return {"probs": [float(p) for p in probs], "regions": regions, "model": META["name"]}
     probs = MODEL.predict_proba(hog_feature(gray)[None, :])[0]
     top = int(np.argmax(probs))
     regions = [] if top == NO_TUMOR_IDX else find_regions(gray, top, float(probs[top]))

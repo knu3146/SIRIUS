@@ -52,7 +52,7 @@ GMAIL_APP_PASSWORD=your-app-password
 
 기본 분석은 브라우저의 데모 휴리스틱입니다. 학습 모델이 준비되어 있으면 다음 흐름으로 분석합니다.
 
-현재 로컬 기본 모델은 추가 학습한 HOG+SVM 후보입니다. 이전 랜덤포레스트와 새 실험의 평가 조건이 달라 정확도 수치를 직접 비교하지 않습니다. 실제 평가 조건과 한계는 `TRAINING_PROGRESS.md`에 기록했습니다.
+현재 로컬 기본 모델은 EfficientNet 고정 특징과 MRI 데이터로 학습한 분류 헤드를 사용합니다. 5개 그룹 분할의 평균 macro-F1을 기준으로 선택했습니다. 기존 모델과의 비교 및 평가 한계는 [학습 작업 기록](TRAINING_PROGRESS.md), [모델 선택 기록](reports/model-selection.json)에 있습니다.
 
 ```text
 브라우저 → /api/analyze → Node.js → 127.0.0.1:5001 Python
@@ -62,12 +62,13 @@ Python 3.11 이상 환경에서:
 
 ```sh
 python -m pip install -r ml/requirements.txt
+python -m pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu
 python ml/infer_server.py
 ```
 
 Windows에서는 `start-ml.bat`을 사용할 수 있습니다. 웹 서버와 분석 서버를 각각 실행하세요.
 
-학습 산출물 `ml/model_rf.joblib`은 Git에서 제외되며 이 저장소를 clone한 것만으로는 Python 분석이 켜지지 않습니다. 기존 로컬 파일을 사용하거나 다음 구조의 데이터로 재학습하세요.
+모델 가중치(`*.joblib`, `*.pth`)는 Git에서 제외되므로 clone만으로는 Python 분석이 켜지지 않습니다. 기존 로컬 모델을 사용하거나 다음 구조의 데이터로 후보를 학습하세요. `Training/Testing`과 `glioma/meningioma/pituitary/notumor` 폴더 이름도 지원합니다.
 
 ```text
 dataset/
@@ -76,10 +77,10 @@ dataset/
 ```
 
 ```sh
-python ml/train_model.py "path/to/dataset"
+python ml/train_model.py "path/to/dataset" --output ml/experiments/my-run --source "데이터 출처"
 ```
 
-학습 시 모델과 `model_meta.json`이 함께 생성됩니다. 추론 서버는 scikit-learn 버전과 모델 해시를 확인합니다. 신뢰할 수 있는 모델만 사용하세요. Python 서버에 연결할 수 없으면 웹앱은 데모 분석으로 돌아갑니다. [Colab 학습 안내](train/README.md)는 별도의 TensorFlow 연결 예제이며 현재 자동 연결된 엔진이 아닙니다.
+후보 모델과 평가 보고서는 별도 실험 폴더에 생성되며 기본 모델을 자동으로 덮어쓰지 않습니다. 검토 후 `python ml/promote_model.py ml/experiments/my-run`으로 활성화하면 기존 모델을 백업합니다. 모델 종류에 따라 필요한 라이브러리 버전과 가중치 해시를 확인합니다. Python 서버에 연결할 수 없으면 웹앱은 데모 분석으로 돌아갑니다. [Colab 학습 안내](train/README.md)는 별도의 TensorFlow 연결 예제입니다.
 
 ## 검사
 
@@ -134,4 +135,10 @@ $env:MODEL_DIR = 'C:\neuro\ml\experiments\new-run'
 
 `MODEL_DIR`에는 해당 실험의 모델 파일과 메타데이터가 함께 있어야 합니다. 기본 웹앱과 연결하려면 기존 분석 서버를 종료하고 후보 서버를 실행하세요. `start-ml.bat`은 프로젝트의 `.venv`가 있으면 우선 사용합니다.
 
-MobileNet 특징 기반 실험은 선택 기능입니다. CPU PyTorch를 설치한 후 `ml/train_transfer.py`를 사용합니다. MRI로 학습되는 부분은 분류 헤드이며, CNN 본체는 ImageNet 사전학습 상태로 고정합니다. 자세한 실제 결과와 한계는 [학습 작업 기록](TRAINING_PROGRESS.md)을 확인하세요. 원본 영상·가상환경·가중치·전체 실험 산출물은 Git에 포함하지 않습니다.
+`ml/train_transfer.py`는 MobileNet 또는 EfficientNet의 고정 특징으로 분류 헤드를 학습하고, `ml/train_finetune.py`는 MobileNet의 마지막 층도 미세조정합니다. 후보 선택에 사용하는 그룹 분할은 실험 보고서에 기록해 다른 모델에도 동일하게 적용합니다. 원본 영상·가상환경·가중치·전체 실험 산출물은 Git에 포함하지 않습니다.
+
+## 자동 검사
+
+GitHub의 [Code checks](https://github.com/knu3146/SIRIUS/actions) 워크플로는 push와 pull request에서 JavaScript 문법·회귀 테스트 및 Python 테스트를 실행합니다. 실제 MRI 데이터나 학습된 가중치는 CI에 올리지 않으며, 모델의 임상 성능을 검증하는 검사도 아닙니다.
+
+Windows 실행 스크립트는 프로젝트 `.venv`를 우선 사용합니다. `start.bat`은 로컬에 준비된 `.runtime/node/node.exe`가 있으면 사용하고, 없으면 설치된 Node.js를 찾습니다. 이 로컬 실행 파일 역시 Git에서 제외합니다.

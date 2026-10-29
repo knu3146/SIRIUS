@@ -3,13 +3,6 @@
 /* ═══════════════════════════════════════════════════════════
    L. 앱 진입 · 잠금
    ═══════════════════════════════════════════════════════════ */
-async function saveVault(){
-  if(S.guest || !S.masterKey || !S.acc) return true;
-  try{
-    S.acc.data = await seal(S.masterKey, {email:S.email, name:S.name, scans:S.scans});
-    return accounts.put(S.acc);
-  }catch(e){ return false; }
-}
 function enterApp(){
   $('landing').hidden = true; $('gate').hidden = true; $('app').hidden = false;
   const label = S.guest ? '둘러보기 모드' : `<b>${esc(S.name || S.acc.id)}</b>님`;
@@ -27,11 +20,12 @@ function enterApp(){
     ? '지금은 둘러보기 모드라 아무것도 저장되지 않습니다.'
     : '로그아웃하면 이 기기에서도 내용을 읽을 수 없습니다.';
   $('tlHint').textContent = S.guest ? '둘러보기 모드 — 저장 기능 꺼짐' : '암호화되어 이 기기에만 저장됩니다 · 최대 8회';
-  $('saveScan').disabled = S.guest || !S.analysis;
+  $('saveScan').disabled = S.guest || !S.analysis || !S.src;
   renderTimeline();
   resetIdle();
 }
 function logout(){
+  cancelVaultWrites();
   cancelPendingImages();
   S.acc = null; S.masterRaw = null; S.masterKey = null; S.email = ''; S.name = '';
   S.scans = []; S.img = null; S.src = null; S.analysis = null; S.regions = []; S.guest = false;
@@ -160,6 +154,7 @@ $('copyQ').onclick = async e => {
 
 $('saveScan').onclick = async () => {
   if(!S.analysis || !S.src || S.guest || $('saveScan').disabled) return;
+  const account = S.acc, scans = S.scans, analysis = S.analysis, source = S.src;
   $('saveScan').disabled = true;
   const previousScans = S.scans.slice();
   S.scans.push({
@@ -172,9 +167,15 @@ $('saveScan').onclick = async () => {
     cost: +($('cost').value || 0)
   });
   if(S.scans.length > 8) S.scans.shift();
-  const ok = await saveVault();
-  if(!ok){ S.scans = previousScans; $('saveScan').disabled = false; alert('저장 공간이 부족해 기록하지 못했습니다. 오래된 회차를 지운 뒤 다시 시도해 주세요.'); return; }
+  const result = await saveVault();
+  if(result.cancelled || S.acc !== account || S.scans !== scans) return;
+  if(!result.ok){
+    S.scans = previousScans;
+    $('saveScan').disabled = S.guest || !S.analysis || !S.src;
+    alert('저장 공간이 부족해 기록하지 못했습니다. 오래된 회차를 지운 뒤 다시 시도해 주세요.'); return;
+  }
   renderTimeline(); renderAccount();
+  if(S.analysis !== analysis || S.src !== source) return;
   $('cost').value = '';
   $('scanLabel').textContent = `${S.scans.length}차로 저장됨`;
   $('saveScan').disabled = true;
@@ -200,11 +201,15 @@ $('tlScroll').addEventListener('click', e => {
   im.src = s.thumb;
 });
 $('clearScans').onclick = async () => {
-  if(!S.scans.length) return;
+  if(!S.scans.length || S.guest || !S.acc) return;
   if(!confirm('저장된 회차 기록을 모두 지웁니다. 되돌릴 수 없습니다.')) return;
   const previousScans = S.scans;
-  S.scans = [];
-  if(!await saveVault()){ S.scans = previousScans; alert('기록 삭제를 저장하지 못했습니다. 다시 시도해 주세요.'); }
+  const account = S.acc, cleared = [];
+  S.scans = cleared;
+  const result = await saveVault();
+  if(result.cancelled || S.acc !== account || S.scans !== cleared) return;
+  if(!result.ok){ S.scans = previousScans; alert('기록 삭제를 저장하지 못했습니다. 다시 시도해 주세요.'); }
+  $('saveScan').disabled = S.guest || !S.analysis || !S.src;
   renderTimeline(); renderAccount();
 };
 

@@ -1,5 +1,7 @@
 {
-  "name": "HOG+svm-c10 candidate v0.3 (demonstration only)",
+  "name": "efficientnet_b0 frozen features + MRI logistic head v0.4 (demonstration only)",
+  "architecture": "efficientnet_b0",
+  "weights": "IMAGENET1K_V1",
   "classes": [
     "glioma_tumor",
     "meningioma_tumor",
@@ -7,12 +9,24 @@
     "no_tumor"
   ],
   "sklearn_version": "1.9.1",
-  "sha256": "3df46428c4e964d6780215d4471b0e4a0b94a88f5c3efa78a2eecab14a1efa7d",
-  "test_accuracy": 0.9513081395348837,
-  "trained_at": "2026-10-29T12:27:24.789857+00:00",
-  "trained_on": "masoudnickparvar/brain-tumor-mri-dataset",
-  "validation_macro_f1": 0.9062251698146094,
-  "evaluation_protocol": "pHash <=4 train/test exclusion and grouped validation",
+  "torch_version": "2.15.0+cpu",
+  "test_accuracy": 0.9760174418604651,
+  "trained_at": "2026-10-29T12:46:57.391102+00:00",
+  "files_sha256": {
+    "classifier.joblib": "bbb7e7d7624fd24d0ea1352d48207a14c1e04097d30e09cb1117feaa409b5952",
+    "backbone.pth": "29483d25900e6e0894d8f2fb8ad30158f5b957cdae3ee7fa6ea1d7fca4c107f9"
+  },
+  "selection": {
+    "metric": "validation macro_f1",
+    "C": 0.1
+  },
+  "validation_macro_f1": 0.9325834172226868,
   "clinical_validation": false,
-  "test_status": "Exploratory benchmark; test previously inspected and patient-level independence not established."
+  "evaluation_protocol": "perceptual hash grouped",
+  "test_status": "Exploratory: this test was inspected in an earlier experiment. External patient-level validation is still required.",
+  "model_selection": {
+    "rule": "highest mean grouped training CV macro_f1",
+    "grouped_cv_macro_f1": 0.9307016102071556,
+    "report": "reports/model-selection.json"
+  }
 }

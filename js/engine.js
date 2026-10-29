@@ -13,7 +13,7 @@ const CLASSES = [
 const DEMO_META = {
   name:'데모 휴리스틱 v0.1',
   probsTitle:'참고용 유형 추정 (데모 엔진)',
-  confNote:'좌우 대칭 비교로 계산한 값입니다. 진단 확률이 아닙니다.'
+  confNote:'학습 모델 결과가 아닌 데모입니다. 좌우 대칭 비교로 계산한 값이며 진단 확률이 아닙니다.'
 };
 const MODEL_META = {
   name:'학습 모델 (시연용)',

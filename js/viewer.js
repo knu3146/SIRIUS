@@ -161,6 +161,12 @@ function loadFile(file){
 let analysisSeq = 0;
 async function runAnalysis(){
   const seq = ++analysisSeq, src = S.src;
+  S.analysis = null; S.regions = []; S.compared = false;
+  $('saveScan').disabled = true;
+  $('probsWrap').hidden = true; $('confWrap').hidden = true; $('checkBox').hidden = true;
+  $('vTitle').textContent = '분석 중…'; $('vConf').textContent = '';
+  $('report').innerHTML = ''; $('findings').innerHTML = '';
+  draw();
   document.body.style.cursor = 'progress';
   let a;
   try{ a = await ENGINE.analyze(src); }

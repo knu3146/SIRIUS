@@ -50,12 +50,16 @@ function makeRecoveryKey(){
 const normRec = s => s.toUpperCase().replace(/[^A-Z0-9]/g,'');
 
 const accounts = {
-  all(){ return ls.get(AKEY) || {}; },
+  all(){
+    const saved = ls.get(AKEY);
+    return saved && typeof saved === 'object' && !Array.isArray(saved)
+      ? Object.assign(Object.create(null), saved) : Object.create(null);
+  },
   save(a){ return ls.set(AKEY, a); },
   byId(id){ return this.all()[String(id||'').toLowerCase()] || null; },
   async byEmail(email){
     const h = await sha256hex(EMAIL_PEPPER + String(email||'').trim().toLowerCase());
-    return Object.values(this.all()).find(a => a.emailHash === h) || null;
+    return Object.values(this.all()).find(a => a && a.emailHash === h) || null;
   },
   put(acc){ const a = this.all(); a[acc.id.toLowerCase()] = acc; return this.save(a); },
   remove(id){ const a = this.all(); delete a[String(id).toLowerCase()]; return this.save(a); }

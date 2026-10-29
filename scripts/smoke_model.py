@@ -37,12 +37,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--node', required=True)
     parser.add_argument('--image', type=Path, required=True)
+    parser.add_argument('--model-dir', type=Path, help='Optional candidate to test instead of the active model')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     web_port, ml_port = free_port(), free_port()
     while ml_port == web_port:
         ml_port = free_port()
-    env = dict(os.environ, NO_OPEN='1', PORT=str(web_port), ML_PORT=str(ml_port), MODEL_DIR=str(root / 'ml'))
+    env = dict(os.environ, NO_OPEN='1', PORT=str(web_port), ML_PORT=str(ml_port), MODEL_DIR=str((args.model_dir or root / 'ml').resolve()))
     for key in ['GMAIL_USER', 'GMAIL_APP_PASSWORD', 'RESEND_API_KEY', 'MAIL_FROM', 'AUTH_SECRET']:
         env.pop(key, None)
     processes = []

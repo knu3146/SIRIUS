@@ -13,8 +13,14 @@ const FILE = path.join(DIR, 'registry.json');
 export const registryAvailable = () => !process.env.VERCEL;
 
 function read(){
-  try{ const d = JSON.parse(fs.readFileSync(FILE, 'utf8')); return Array.isArray(d.users) ? d : {users:[]}; }
-  catch(e){ return {users: []}; }
+  let raw;
+  try{ raw = fs.readFileSync(FILE, 'utf8'); }
+  catch(e){ if(e.code === 'ENOENT') return {users: []}; throw e; }
+  const data = JSON.parse(raw);
+  if(!data || !Array.isArray(data.users) || data.users.some(u =>
+    !u || typeof u.id !== 'string' || typeof u.emailHash !== 'string'))
+    throw new Error('가입자 등록부 형식이 올바르지 않습니다. 기존 파일을 확인해 주세요.');
+  return data;
 }
 function write(data){
   fs.mkdirSync(DIR, {recursive: true});

@@ -24,7 +24,8 @@ function viewer() {
     alert: () => assert.fail('Unexpected analysis error'),
   });
   vm.runInContext(readFileSync(new URL('../js/viewer.js', import.meta.url), 'utf8'), context);
-  return { context, state, pending, names, images, renders: () => renders };
+  context.draw = () => {};
+  return { context, state, pending, names, images, elements, renders: () => renders };
 }
 
 test('늦게 끝난 이전 분석이 최신 영상과 모델 배지를 덮어쓰지 않는다', async () => {
@@ -40,6 +41,18 @@ test('늦게 끝난 이전 분석이 최신 영상과 모델 배지를 덮어쓰
   assert.equal(v.state.analysis.model, 'new-model');
   assert.deepEqual(v.names, ['new-model']);
   assert.equal(v.renders(), 1);
+});
+
+test('새 영상 분석 중에는 이전 분석 결과를 저장할 수 없다', async () => {
+  const v = viewer();
+  v.state.src = { id: 'new-image' };
+  v.state.analysis = { model: 'old-result' };
+  const work = v.context.runAnalysis();
+  assert.equal(v.state.analysis, null);
+  assert.equal(v.elements.get('saveScan').disabled, true);
+  v.pending[0]({ kind: 'model', model: 'new-model', regions: [] });
+  await work;
+  assert.equal(v.state.analysis.model, 'new-model');
 });
 
 test('로그아웃 때 취소한 이미지 로드는 화면에 다시 나타나지 않는다', () => {
