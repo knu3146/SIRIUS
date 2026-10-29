@@ -45,6 +45,8 @@ function renderAll(){
   draw();
 }
 function renderTimeline(){
+  const safeThumb = value => typeof value === 'string' && value.length <= 1024*1024 && /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(value) ? value : '';
+  const safeStatus = value => ['good','bad','spread','neutral'].includes(value) ? value : 'neutral';
   $('tlScroll').innerHTML = !S.scans.length ? '' : `
     <table class="rec">
       <thead><tr><th>회차</th><th>날짜</th><th>이미지</th><th>주요 부위</th><th>상태</th><th></th></tr></thead>
@@ -52,9 +54,9 @@ function renderTimeline(){
         <tr>
           <td class="mono">${i+1}차</td>
           <td class="mono">${esc(s.date)}</td>
-          <td><img src="${s.thumb}" alt="${i+1}차 영상 축소본"></td>
+          <td><img src="${safeThumb(s.thumb)}" alt="${i+1}차 영상 축소본"></td>
           <td>${s.regions.length ? esc(s.regions[0].name) + (s.regions.length>1 ? ` 외 ${s.regions.length-1}곳` : '') : '특이 소견 없음'}</td>
-          <td><span class="recdots">${s.regions.length ? s.regions.map(r=>`<i class="dot ${r.status}"></i>`).join('') : '<i class="dot neutral"></i>'}</span></td>
+          <td><span class="recdots">${s.regions.length ? s.regions.map(r=>`<i class="dot ${safeStatus(r.status)}"></i>`).join('') : '<i class="dot neutral"></i>'}</span></td>
           <td><button class="btn sm tlcard" data-i="${i}">결과 보기</button></td>
         </tr>`).join('')}</tbody>
     </table>`;

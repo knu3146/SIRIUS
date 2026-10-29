@@ -50,7 +50,7 @@ function buildModelReport(a, regions, simple, nth){
   }
   return [
     `이번 ${nth}차 영상에서 학습 모델이 가장 가깝다고 본 유형은 <b>${top.c.ko}</b>(${pct}%)입니다. 이 모델은 4가지 유형을 나누도록만 학습한 시연용이라, 그 밖의 질환이나 작은 변화는 구분하지 못합니다.`,
-    n ? `${regions.map(r=>`<b>${r.name}</b>`).join(', ')}은(는) 모델이 이 판단에 크게 반영한 영역입니다. 병변의 경계나 정확한 위치가 아니며, 영상이 어느 방향 단면인지도 따지지 않고 계산한 값입니다.`
+    n ? `${regions.map(r=>`<b>${esc(r.name)}</b>`).join(', ')}은(는) 모델이 이 판단에 크게 반영한 영역입니다. 병변의 경계나 정확한 위치가 아니며, 영상이 어느 방향 단면인지도 따지지 않고 계산한 값입니다.`
       : '모델이 이 판단에 특별히 크게 반영한 영역은 표시할 만큼 뚜렷하지 않았습니다.',
     '이 모델로는 회차 간 호전·악화를 가릴 수 없어, 표시 영역은 모두 보라색으로 둡니다.',
     '이 결과는 진단이 아니라 <b>질문을 준비하기 위한 정리</b>입니다. 확진에는 여러 단면과 촬영 기법, 필요하면 조영증강 영상과 임상 진찰이 함께 필요합니다.'
@@ -68,16 +68,16 @@ function buildReport(a, regions, compared, simple){
   }
   const t = regions[0], rest = regions.slice(1), lines = [];
   if(simple){
-    lines.push(`사진에서 눈에 띄는 곳은 ${n}군데입니다. 가장 뚜렷한 곳은 <b>${t.name}</b>이고, 반대쪽 같은 자리보다 하얗게 보입니다.`);
+    lines.push(`사진에서 눈에 띄는 곳은 ${n}군데입니다. 가장 뚜렷한 곳은 <b>${esc(t.name)}</b>이고, 반대쪽 같은 자리보다 하얗게 보입니다.`);
     lines.push('뇌는 원래 왼쪽과 오른쪽 모양이 거의 같습니다. 한쪽만 다르게 보이면 그 자리를 먼저 확인합니다.');
-    if(compared) lines.push(`지난번 사진과 견준 데모 표시 변화: ${regions.map(r=>`${r.name}은(는) ${STATUS_KO[r.status]}`).join(', ')}. 색은 표시 영역의 차이이며 병이 좋아지거나 나빠졌다는 뜻은 아닙니다.`);
+    if(compared) lines.push(`지난번 사진과 견준 데모 표시 변화: ${regions.map(r=>`${esc(r.name)}은(는) ${esc(STATUS_KO[r.status])}`).join(', ')}. 색은 표시 영역의 차이이며 병이 좋아지거나 나빠졌다는 뜻은 아닙니다.`);
     lines.push('이 결과는 <b>진단이 아닙니다.</b> 질문 목록을 챙겨 담당 의사에게 그대로 물어보세요.');
     return lines;
   }
-  lines.push(`이번 ${nth}차 영상의 데모 분석에서 좌우 밝기 차이가 큰 지점 ${n}곳을 표시했습니다. 가장 두드러진 곳은 <b>${t.name}</b>입니다. (비대칭 점수 ${(t.conf*100).toFixed(0)}% — 진단 신뢰도가 아님)`);
-  if(rest.length) lines.push(`그 밖에 ${rest.map(r=>`<b>${r.name}</b>`).join(', ')}에서도 같은 방향의 신호 차이가 관찰됩니다. 크기가 작을수록 촬영 각도나 잡음일 가능성도 함께 고려해야 합니다.`);
+  lines.push(`이번 ${nth}차 영상의 데모 분석에서 좌우 밝기 차이가 큰 지점 ${n}곳을 표시했습니다. 가장 두드러진 곳은 <b>${esc(t.name)}</b>입니다. (비대칭 점수 ${(t.conf*100).toFixed(0)}% — 진단 신뢰도가 아님)`);
+  if(rest.length) lines.push(`그 밖에 ${rest.map(r=>`<b>${esc(r.name)}</b>`).join(', ')}에서도 같은 방향의 신호 차이가 관찰됩니다. 크기가 작을수록 촬영 각도나 잡음일 가능성도 함께 고려해야 합니다.`);
   lines.push('부위 이름은 축상면 기준이며, 영상의 왼쪽이 환자의 오른쪽입니다(방사선과 표기 관례). 병변 주변이 넓게 밝다면 부종이 함께 있을 수 있습니다.');
-  if(compared) lines.push(`직전 회차와 맞대어 본 결과: ${regions.map(r=>`<b>${r.name}</b> — ${STATUS_KO[r.status]}(${r.change})`).join(' · ')}.`);
+  if(compared) lines.push(`직전 회차와 맞대어 본 결과: ${regions.map(r=>`<b>${esc(r.name)}</b> — ${esc(STATUS_KO[r.status])}(${esc(r.change)})`).join(' · ')}.`);
   else lines.push('비교 가능한 이전 표시 정보가 없어 보라색으로 표시했습니다. 데모 표시의 크기와 위치 변화는 촬영 조건에 영향을 받으며 의학적 호전·악화를 뜻하지 않습니다.');
   lines.push('이 결과는 진단이 아니라 <b>질문을 준비하기 위한 정리</b>입니다. 확진에는 여러 단면과 촬영 기법, 필요하면 조영증강 영상과 임상 진찰이 함께 필요합니다.');
   return lines;

@@ -1,0 +1,19 @@
+{
+  "architecture": "sirius_net",
+  "epochs_completed": 22,
+  "best_epoch": 18,
+  "validation": {
+    "accuracy": 0.9412429378531073,
+    "macro_f1": 0.940776234331261,
+    "images": 885
+  },
+  "fit_images": 3540,
+  "test_images_used": false,
+  "clinical_validation": false,
+  "model_promoted": false,
+  "grouped_cv_status": "remaining four folds started",
+  "limitations": [
+    "Single internal validation fold with epoch selection; not independent external accuracy.",
+    "Patient-level independence is not established."
+  ]
+}

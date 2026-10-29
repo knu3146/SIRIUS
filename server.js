@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const ENV_FILE = path.join(ROOT, '.env.local');
+const PUBLIC_FILES = new Set(['index.html', 'css/style.css',
+  ...Array.from(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').matchAll(/<script src="(js\/[A-Za-z0-9_-]+\.js)"><\/script>/g), match => match[1])]);
 const PORT = Number(process.env.PORT) || 3000;
 
 /* ── .env.local 읽기 ──────────────────────────────────────── */
@@ -123,7 +125,7 @@ function serveStatic(req, res, pathname){
   if(rel.split(/[\\/]/).some(segment => segment.startsWith('.')) || BLOCKED.some(re => re.test(rel)))
     return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
   // Serve a fixed application surface, never arbitrary files added to the workspace.
-  if(rel !== 'index.html' && !/^(?:js[\\/][A-Za-z0-9_-]+\.js|css[\\/]style\.css)$/.test(rel))
+  if(!PUBLIC_FILES.has(rel.replace(/\\/g, '/')))
     return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
 
   const file = path.join(ROOT, rel);
@@ -239,7 +241,7 @@ async function serveAnalyze(req, res){
 /* ── 서버 ─────────────────────────────────────────────────── */
 refuseHardcodedKey();
 loadEnv();
-ensureEnvFile();
+if(process.env.ENABLE_EMAIL_AUTH === 'true') ensureEnvFile();
 
 const mailReady = process.env.ENABLE_EMAIL_AUTH === 'true' && Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
                           (process.env.RESEND_API_KEY && process.env.MAIL_FROM));

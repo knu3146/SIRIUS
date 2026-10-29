@@ -1,4 +1,8 @@
 'use strict';
+const EMPTY_ANALYSIS_VIEW = new Map([
+  'vTitle','vConf','report','findings','confPct','confNote','probs','probsTitle','questions',
+  'scanLabel','fbSeries','fbSize','fbTime','fbQuality','checkMsg','tlScroll'
+].map(id => [id, $(id).innerHTML]));
 
 /* ═══════════════════════════════════════════════════════════
    L. 앱 진입 · 잠금
@@ -28,6 +32,8 @@ function logout(){
   clearTimeout(idleTimer);
   cancelVaultWrites();
   cancelPendingImages();
+  if(S.src && typeof S.src.getContext === 'function'){ S.src.width = 0; S.src.height = 0; }
+  if(S.img && typeof S.img.removeAttribute === 'function') S.img.removeAttribute('src');
   S.acc = null; S.masterRaw = null; S.masterKey = null; S.email = ''; S.name = '';
   S.scans = []; S.img = null; S.src = null; S.analysis = null; S.regions = []; S.guest = false;
   flow.purpose = null; flow.id = ''; flow.email = ''; flow.pw = ''; flow.acc = null;
@@ -45,6 +51,9 @@ function logout(){
   $('report').innerHTML = ''; $('findings').innerHTML = ''; $('probsWrap').hidden = true;
   $('checkBox').hidden = true; $('tlScroll').innerHTML = ''; $('vTitle').textContent = '';
   $('loginPw').value = '';
+  for(const [id, html] of EMPTY_ANALYSIS_VIEW) $(id).innerHTML = html;
+  $('confWrap').hidden = true; $('probsWrap').hidden = true; $('checkBox').hidden = true;
+  $('cost').value = '';
   if(typeof CONFIG !== 'undefined' && CONFIG.privacy) showLanding(); else show('login');
 }
 let idleTimer = null;

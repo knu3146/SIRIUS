@@ -14,3 +14,11 @@ Claude가 전달한 CNN 구조를 현재 프로젝트의 기존 pHash 그룹 분
 출력 경로는 새 디렉터리여야 한다. 준비 과정은 학습·검증 그룹이 겹치지 않는지, 원본 이미지 해시가 바뀌지 않았는지 확인한 뒤 필요한 파일만 복사한다. 학습 로더는 요청한 split만 열고 캐시를 파일 내용 해시와 데이터 루트에 연결한다. 마지막 작은 배치도 학습하며 예전 체크포인트를 덮어쓰지 않는다.
 
 의존성은 프로젝트의 NumPy/Pillow/scikit-image/scikit-learn과 CPU PyTorch다. 이 학습에는 ONNX Runtime이나 OpenCV가 필요하지 않다. 과거 ONNX의 재평가·내보내기 코드는 이번 공개 학습 경로에 포함하지 않는다. 학습 결과를 확인한 뒤 동일한 데이터·선택 규칙으로 비교하고, 근거 없이 활성 모델을 바꾸지 않는다.
+
+첫 분할의 22 epoch 학습 후, 나머지 네 분할을 같은 설정으로 비교한다. 이 실행은 학습/검증 이미지만 준비하고 테스트 영상 경로를 하위 학습 작업에 전달하지 않는다.
+
+```powershell
+.\.venv\Scripts\python.exe ml/cross_validate_sirius.py --evaluation ml/experiments/run-004-grouped/evaluation.json --audit datasets/audit-7023.json --first-fold ml/experiments/run-008-sirius-grouped --output ml/experiments/sirius-grouped-cv
+```
+
+분할별 완료 기록은 로컬 `progress.json`, 최종 집계는 `cross-validation.json`에 쌓인다. 각 분할에서 에폭을 고르는 내부 모델 선택용 비교이며 새로운 독립 평가를 대신하지 않는다.
