@@ -1,0 +1,35 @@
+{
+  "registered_at_utc": "2026-10-29T14:20:46.448520+00:00",
+  "dataset": "BRISC 2025 official classification test split",
+  "dataset_source": "https://www.kaggle.com/datasets/briscdataset/brisc2025",
+  "publication": "https://doi.org/10.1038/s41597-026-06753-y",
+  "archive_sha256": "edc2295d0eb6be19aa4ecee74974db0efbb5e088ddcdfde5229e3e2bfb0d010b",
+  "frozen_model": {
+    "architecture": "efficientnet_b0",
+    "files_sha256": {
+      "classifier.joblib": "bbb7e7d7624fd24d0ea1352d48207a14c1e04097d30e09cb1117feaa409b5952",
+      "backbone.pth": "29483d25900e6e0894d8f2fb8ad30158f5b957cdae3ee7fa6ea1d7fca4c107f9"
+    }
+  },
+  "reference_datasets": [
+    "datasets/audit-7023.json",
+    "datasets/audit-sartaj.json"
+  ],
+  "eligibility": [
+    "Official classification_task/test images only.",
+    "Remove any exact grayscale128 model-input hash in prior development datasets.",
+    "Remove any image with pHash Hamming distance <=4 to any prior development image.",
+    "Collapse retained test pHash <=4 connected components to one lexicographically first image; reject mixed-label groups."
+  ],
+  "metrics": [
+    "accuracy",
+    "macro_f1",
+    "class precision/recall/F1",
+    "confusion_matrix"
+  ],
+  "selection_or_training_on_this_dataset": false,
+  "limitations": [
+    "BRISC shares source collections with earlier datasets; filtering cannot establish patient-level independence.",
+    "If classes are absent after filtering, results cover only surviving classes."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "protocol_sha256": "9b48acc58c33a412678eddd8b8e23877f50447a0d6c43699a150246d10bc8dfc",
+  "reference_audits_sha256": {
+    "datasets/audit-7023.json": "7204e51d116ded2946eb74821577dd754e7511f8d355b7916ba6ce83438c5cff",
+    "datasets/audit-sartaj.json": "1a6a5ac2c73db257e208269fe3340ea1696c155ad6302ff75ae81c5d7e17690b"
+  },
+  "official_manifest_images_verified": 1000,
+  "candidate_images": 1000,
+  "included_images": 132,
+  "excluded": {
+    "duplicate-external-group": 8,
+    "exact-reference-overlap": 858,
+    "perceptual-reference-overlap": 2
+  },
+  "included_class_counts": {
+    "glioma_tumor": 0,
+    "meningioma_tumor": 1,
+    "pituitary_tumor": 0,
+    "no_tumor": 131
+  },
+  "model_predictions_computed": false,
+  "limitations": [
+    "BRISC shares source collections with earlier datasets; filtering cannot establish patient-level independence.",
+    "If classes are absent after filtering, results cover only surviving classes."
+  ]
+}

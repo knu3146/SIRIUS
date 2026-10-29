@@ -1,0 +1,40 @@
+{
+  "source": "https://www.kaggle.com/datasets/orvile/pmram-bangladeshi-brain-cancer-mri-dataset",
+  "reference_audits_sha256": {
+    "datasets\\audit-7023.json": "7204e51d116ded2946eb74821577dd754e7511f8d355b7916ba6ce83438c5cff",
+    "datasets\\audit-sartaj.json": "1a6a5ac2c73db257e208269fe3340ea1696c155ad6302ff75ae81c5d7e17690b"
+  },
+  "candidate_images": 1505,
+  "by_raw_class": {
+    "512Glioma": {
+      "original": 373,
+      "remaining": 152
+    },
+    "512Meningioma": {
+      "original": 363,
+      "remaining": 279
+    },
+    "512Normal": {
+      "original": 396,
+      "remaining": 87
+    },
+    "512Pituitary": {
+      "original": 373,
+      "remaining": 0
+    }
+  },
+  "excluded": {
+    "duplicate-candidate-group": 98,
+    "exact-reference-overlap": 8,
+    "mixed-label-perceptual-group": 3,
+    "perceptual-reference-overlap": 876,
+    "reference-linked-perceptual-group": 2
+  },
+  "predictions_or_training_performed": false,
+  "limitations": [
+    "Folder names are preserved; ambiguous labels are not mapped to model classes.",
+    "A lack of exact or pHash<=4 matches does not establish patient-level independence.",
+    "Rotation, cropping, other augmentation, and unidentified repeated patients may escape this filter."
+  ],
+  "filter_version": "connected-component-reference-exclusion-v2"
+}

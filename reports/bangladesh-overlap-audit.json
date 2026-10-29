@@ -1,0 +1,35 @@
+{
+  "source": "https://www.kaggle.com/datasets/orvile/brain-cancer-mri-dataset",
+  "reference_audits_sha256": {
+    "datasets\\audit-7023.json": "7204e51d116ded2946eb74821577dd754e7511f8d355b7916ba6ce83438c5cff",
+    "datasets\\audit-sartaj.json": "1a6a5ac2c73db257e208269fe3340ea1696c155ad6302ff75ae81c5d7e17690b"
+  },
+  "candidate_images": 6056,
+  "by_raw_class": {
+    "brain_glioma": {
+      "original": 2004,
+      "remaining": 1756
+    },
+    "brain_menin": {
+      "original": 2004,
+      "remaining": 1887
+    },
+    "brain_tumor": {
+      "original": 2048,
+      "remaining": 1952
+    }
+  },
+  "excluded": {
+    "duplicate-candidate-group": 133,
+    "mixed-label-perceptual-group": 200,
+    "perceptual-reference-overlap": 19,
+    "reference-linked-perceptual-group": 109
+  },
+  "predictions_or_training_performed": false,
+  "limitations": [
+    "Folder names are preserved; ambiguous labels are not mapped to model classes.",
+    "A lack of exact or pHash<=4 matches does not establish patient-level independence.",
+    "Rotation, cropping, other augmentation, and unidentified repeated patients may escape this filter."
+  ],
+  "filter_version": "connected-component-reference-exclusion-v2"
+}

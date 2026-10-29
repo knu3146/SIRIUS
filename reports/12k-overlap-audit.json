@@ -1,0 +1,40 @@
+{
+  "source": "https://www.kaggle.com/datasets/arvinthcinmayangk/mendely-brain-tumor",
+  "reference_audits_sha256": {
+    "datasets\\audit-7023.json": "7204e51d116ded2946eb74821577dd754e7511f8d355b7916ba6ce83438c5cff",
+    "datasets\\audit-sartaj.json": "1a6a5ac2c73db257e208269fe3340ea1696c155ad6302ff75ae81c5d7e17690b"
+  },
+  "candidate_images": 12064,
+  "by_raw_class": {
+    "glioma": {
+      "original": 3773,
+      "remaining": 580
+    },
+    "meningioma": {
+      "original": 2729,
+      "remaining": 299
+    },
+    "notumor": {
+      "original": 2432,
+      "remaining": 221
+    },
+    "pituitary": {
+      "original": 3130,
+      "remaining": 318
+    }
+  },
+  "excluded": {
+    "duplicate-candidate-group": 300,
+    "exact-reference-overlap": 6366,
+    "mixed-label-perceptual-group": 17,
+    "perceptual-reference-overlap": 3912,
+    "reference-linked-perceptual-group": 51
+  },
+  "predictions_or_training_performed": false,
+  "limitations": [
+    "Folder names are preserved; ambiguous labels are not mapped to model classes.",
+    "A lack of exact or pHash<=4 matches does not establish patient-level independence.",
+    "Rotation, cropping, other augmentation, and unidentified repeated patients may escape this filter."
+  ],
+  "filter_version": "connected-component-reference-exclusion-v2"
+}

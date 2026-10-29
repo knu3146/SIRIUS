@@ -137,6 +137,18 @@ $env:MODEL_DIR = 'C:\neuro\ml\experiments\new-run'
 
 `ml/train_transfer.py`는 MobileNet 또는 EfficientNet의 고정 특징으로 분류 헤드를 학습하고, `ml/train_finetune.py`는 MobileNet의 마지막 층도 미세조정합니다. 후보 선택에 사용하는 그룹 분할은 실험 보고서에 기록해 다른 모델에도 동일하게 적용합니다. 원본 영상·가상환경·가중치·전체 실험 산출물은 Git에 포함하지 않습니다.
 
+## 추가 데이터 조사
+
+Kaggle의 MRI 12K·PMRAM·Brain Cancer MRI와 BRISC 평가 자료를 내려받아 기존 개발 자료와의 중복을 조사했다. 후보별 구성과 실제 잔존 수는 [데이터 조사 보고서](reports/dataset-candidates.md)에 기록했다. MRI 12K는 네 유형 총 1,418장이 중복 감사 후 남았지만, 환자 단위 독립성이나 회전·크롭 증강 중복을 검증한 결과는 아니다. 이 후보 자료로 새 정확도를 계산하거나 모델을 추가 학습하지 않았다.
+
+일반 후보 검사는 아래와 같이 재현한다. 경로와 원 게시물은 내려받은 자료에 맞게 지정한다.
+
+```sh
+python ml/audit_candidate.py --dataset datasets/new-candidate --references datasets/audit-7023.json datasets/audit-sartaj.json --source https://www.kaggle.com/datasets/OWNER/DATASET --output datasets/candidate-audit.json --summary reports/candidate-audit.json
+```
+
+후보 유사 이미지 그룹 전체가 기존 자료에 연결되는지도 확인한다. 이미지별 경로·해시가 들어간 전체 감사 파일과 원본 영상은 Git에 포함하지 않는다.
+
 ## 자동 검사
 
 GitHub의 [Code checks](https://github.com/knu3146/SIRIUS/actions) 워크플로는 push와 pull request에서 JavaScript 문법·회귀 테스트 및 Python 테스트를 실행합니다. 실제 MRI 데이터나 학습된 가중치는 CI에 올리지 않으며, 모델의 임상 성능을 검증하는 검사도 아닙니다.
