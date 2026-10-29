@@ -1,0 +1,19 @@
+{
+  "name": "mri-reader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "뇌 MRI 읽어주기 — 일반인을 위한 MRI 이해 도우미",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node scripts/check.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "nodemailer": "^7.0.0"
+  }
+}

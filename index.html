@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  보안 정책
+  connect-src 'self' → 같은 도메인의 /api/* 만 호출 가능. 외부로는 아무것도 못 보냅니다.
+  script-src 'self'  → 인라인 스크립트 전면 금지. XSS가 끼어들 자리를 없앱니다.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: blob:; media-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>NEURIA — 뇌 MRI 쉽게 이해하기</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ══════════════ 랜딩 ══════════════ -->
+<div class="site" id="landing">
+  <header class="sitebar">
+    <div class="sitebar-in">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-5 .3A2.6 2.6 0 0 0 5 7.3a2.6 2.6 0 0 0 .4 4.2A2.6 2.6 0 0 0 7 16a2.5 2.5 0 0 0 5 .5zM12 4.5a2.5 2.5 0 0 1 5 .3 2.6 2.6 0 0 1 2 2.5 2.6 2.6 0 0 1-.4 4.2A2.6 2.6 0 0 1 17 16a2.5 2.5 0 0 1-5 .5z"/><path d="M12 4.5v15"/></svg>NEURIA</span>
+      <nav class="sitenav">
+        <button data-landing="about">서비스 소개</button>
+        <button data-landing="guide">사용 가이드</button>
+        <button data-landing="faq">자주 묻는 질문</button>
+      </nav>
+      <div class="right">
+        <button class="iconbtn" id="themeBtn" title="밝게 / 어둡게">◐</button>
+        <button class="btn sm" id="toLoginTop">로그인</button>
+        <button class="btn sm primary" id="toSignupTop">회원가입</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="brandline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-5 .3A2.6 2.6 0 0 0 5 7.3a2.6 2.6 0 0 0 .4 4.2A2.6 2.6 0 0 0 7 16a2.5 2.5 0 0 0 5 .5zM12 4.5a2.5 2.5 0 0 1 5 .3 2.6 2.6 0 0 1 2 2.5 2.6 2.6 0 0 1-.4 4.2A2.6 2.6 0 0 1 17 16a2.5 2.5 0 0 1-5 .5z"/><path d="M12 4.5v15"/></svg>
+        <span>NEURIA</span>
+      </div>
+      <h1>뇌 MRI를<br>쉽게 이해하는 설명 도우미</h1>
+      <p class="lede">어려운 의학 용어는 쉽게, 내 MRI 영상에서 눈여겨볼 곳은 그림으로. 진료실에서 물어볼 질문까지 정리해 드립니다.</p>
+      <div class="cta">
+        <button class="btn primary" id="heroStart">MRI 이미지 올리기 →</button>
+        <button class="btn" data-landing="about">서비스 소개 보기</button>
+      </div>
+    </div>
+    <div class="hero-art">
+      <canvas id="heroCanvas" width="760" height="700"></canvas>
+      <div class="hero-note">이 부분은 <b>좌측 기저핵 부근</b>으로, 운동 조절과 관련된 영역입니다.</div>
+    </div>
+  </section>
+
+  <section class="features" id="about">
+    <div class="feature">
+      <span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg></span>
+      <div><h4>쉬운 설명</h4><p>복잡한 의학 용어를 일반인이 이해할 수 있는 말로 바꿔 드립니다.</p></div>
+    </div>
+    <div class="feature">
+      <span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+      <div><h4>시각 안내</h4><p>눈여겨볼 부위를 영상 위에 색으로 표시하고, 회차별 변화를 비교합니다.</p></div>
+    </div>
+    <div class="feature">
+      <span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.6"/></svg></span>
+      <div><h4>안전한 비진단 서비스</h4><p>진단이 아닌 이해를 돕는 설명용 서비스. 사진은 이 컴퓨터 밖으로 나가지 않습니다.</p></div>
+    </div>
+  </section>
+
+  <footer class="sitefoot">
+    <div class="in">
+      <b>NEURIA는 의료 진단을 하지 않습니다.</b> 학습·이해를 돕는 도구이며, 실제 판독과 치료 결정은 담당 의사에게 확인하세요.<br>
+      올린 사진은 브라우저 메모리에서만 처리되고 저장되지 않습니다. 저장한 회차 기록은 비밀번호로 암호화되어 이 기기에만 남습니다.
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════ 인증 ══════════════ -->
+<div class="site" id="gate" hidden>
+  <header class="sitebar">
+    <div class="sitebar-in">
+      <button class="logo" id="authHome" style="border:0;background:none;padding:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-5 .3A2.6 2.6 0 0 0 5 7.3a2.6 2.6 0 0 0 .4 4.2A2.6 2.6 0 0 0 7 16a2.5 2.5 0 0 0 5 .5zM12 4.5a2.5 2.5 0 0 1 5 .3 2.6 2.6 0 0 1 2 2.5 2.6 2.6 0 0 1-.4 4.2A2.6 2.6 0 0 1 17 16a2.5 2.5 0 0 1-5 .5z"/><path d="M12 4.5v15"/></svg>NEURIA</button>
+      <nav class="sitenav">
+        <button data-landing="about">서비스 소개</button>
+        <button data-landing="guide">사용 가이드</button>
+        <button data-landing="faq">자주 묻는 질문</button>
+      </nav>
+      <div class="right">
+        <span class="chip" id="backendBadge">인증 방식 확인 중…</span>
+        <button class="iconbtn" id="themeBtn2" title="밝게 / 어둡게">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="authwrap">
+    <div class="authcard">
+
+      <!-- 로그인 -->
+      <section class="screen" id="scr-login">
+        <h2>로그인</h2>
+        <p class="lede">NEURIA와 함께<br>뇌 MRI를 더 쉽게 이해하세요.</p>
+        <div class="err" id="err-login" hidden></div>
+        <div class="okmsg" id="ok-login" hidden></div>
+        <div class="notice sec authnote">
+          <span class="ic" aria-hidden="true">🔒</span>
+          <div><b>보안을 위해 로그인 상태를 저장하지 않습니다.</b> 창을 닫거나 새로고침하면 그때마다 다시 로그인해야 하고, 10분간 조작이 없으면 자동으로 로그아웃됩니다. 기억되는 것은 아이디뿐이며 비밀번호는 어디에도 저장되지 않습니다.</div>
+        </div>
+        <div class="field">
+          <label for="loginId">아이디 또는 이메일</label>
+          <input id="loginId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="아이디 또는 이메일 주소">
+        </div>
+        <div class="field">
+          <label for="loginPw">비밀번호</label>
+          <input id="loginPw" type="password" autocomplete="off" placeholder="비밀번호">
+        </div>
+        <div class="rowopt">
+          <label title="비밀번호는 어디에도 저장되지 않습니다"><input type="checkbox" id="rememberId"> 아이디만 기억하기</label>
+          <button class="linkbtn" id="goFindPw">비밀번호 찾기</button>
+        </div>
+        <button class="btn primary full" id="btnLogin">로그인</button>
+
+        <div class="vbox" id="lgBox" hidden>
+          <label for="lgCode">이메일로 보낸 인증번호 6자리</label>
+          <div class="demobox" id="lgDemo" hidden>
+            데모 모드 — 메일 서버가 없어 인증번호를 화면에 표시합니다.
+            <span class="big" id="lgDemoCode"></span>
+          </div>
+          <div class="inline">
+            <input id="lgCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+            <button class="btn primary" id="lgCheck">확인</button>
+          </div>
+          <div class="inline-meta">
+            <span class="help" id="lgTimer"></span>
+            <button class="linkbtn" id="lgResend">재발송</button>
+          </div>
+        </div>
+
+        <div class="divider">또는</div>
+        <div class="social">
+          <button class="btn full" data-soon="Google">
+            <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8C16.9 3.1 14.7 2 12 2a10 10 0 0 0-8.9 5.4L6.4 10c.8-2.4 3-4 5.6-4z"/></svg>
+            Google로 계속하기
+          </button>
+          <button class="btn full" data-soon="Apple">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.3 12.8c0-2.2 1.8-3.2 1.9-3.3-1-1.5-2.6-1.7-3.2-1.8-1.4-.1-2.7.8-3.3.8-.7 0-1.7-.8-2.8-.8-1.5 0-2.8.8-3.6 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7s1.6.7 2.8.7c1.1 0 1.9-1 2.6-2.1.8-1.2 1.2-2.4 1.2-2.4s-2.2-.9-2.2-3.3zM14.4 5.9c.6-.7 1-1.7.9-2.7-.9 0-2 .6-2.6 1.3-.6.6-1.1 1.7-.9 2.6 1 .1 2-.5 2.6-1.2z"/></svg>
+            Apple로 계속하기
+          </button>
+        </div>
+
+        <div class="authlinks">
+          <span>계정이 없으신가요?</span>
+          <button class="strong" id="goSignup">회원가입하기</button>
+          <button id="goFindId">아이디 찾기</button>
+        </div>
+        <p class="note">계정과 검사 기록은 <b>이 브라우저 안에만</b> 저장되고 외부로 전송되지 않습니다. 가입 없이 분석만 보려면 <button class="linkbtn" id="goGuest">둘러보기로 열기</button>.</p>
+        <p class="tiny" style="text-align:center;margin:10px 0 0">처음 오셨나요? <button class="linkbtn" data-landing="about">NEURIA 소개 보기</button></p>
+      </section>
+
+      <!-- 회원가입 -->
+      <section class="screen" id="scr-signup" hidden>
+        <div class="steps">
+          <span class="st on"><i>1</i>기본 정보</span><span class="bar"></span>
+          <span class="st" id="suStep2"><i>2</i>복구 키</span><span class="bar"></span>
+          <span class="st"><i>3</i>완료</span>
+        </div>
+        <h2>회원가입</h2>
+        <p class="lede">간단한 정보로 시작할 수 있어요. 이메일 인증을 마쳐야 가입이 완료됩니다.</p>
+        <div class="err" id="err-signup" hidden></div>
+
+        <div class="field">
+          <label for="suName">이름</label>
+          <input id="suName" type="text" autocomplete="name" maxlength="20" placeholder="홍길동">
+          <span class="help">화면 인사말에만 쓰이며, 암호화되어 저장됩니다.</span>
+        </div>
+        <div class="field">
+          <label for="suId">아이디</label>
+          <input id="suId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="영문·숫자·밑줄 4~20자">
+          <span class="help" id="suIdHelp">로그인에 사용합니다. 다른 사용자와 겹치지 않아야 합니다.</span>
+        </div>
+        <div class="field">
+          <label for="suEmail">이메일 주소</label>
+          <div class="inline">
+            <input id="suEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="example@naver.com">
+            <button class="btn" id="suSend">인증번호 받기</button>
+          </div>
+          <span class="help">아이디·비밀번호 찾기에만 사용하며, 가려진 형태로만 저장됩니다.</span>
+        </div>
+        <div class="vbox" id="suBox" hidden>
+          <label for="suCode">인증번호 6자리</label>
+          <div class="demobox" id="suDemo" hidden>
+            데모 모드 — 메일 서버가 없어 인증번호를 화면에 표시합니다.
+            <span class="big" id="suDemoCode"></span>
+          </div>
+          <div class="inline">
+            <input id="suCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+            <button class="btn" id="suCheck">확인</button>
+          </div>
+          <div class="inline-meta"><span class="help" id="suTimer"></span></div>
+        </div>
+        <div class="vok" id="suOk" hidden><span class="mk" aria-hidden="true">✓</span> 이메일 인증이 완료되었습니다.</div>
+
+        <div class="field">
+          <label for="suPw">비밀번호</label>
+          <input id="suPw" type="password" autocomplete="new-password" placeholder="영문, 숫자, 특수문자 포함 8자 이상">
+          <div class="meter"><i id="suPwBar"></i></div>
+          <div class="pwreq" id="suPwReq"></div>
+        </div>
+        <div class="field">
+          <label for="suPw2">비밀번호 확인</label>
+          <input id="suPw2" type="password" autocomplete="new-password" placeholder="비밀번호를 다시 입력해주세요">
+          <span class="help" id="suPw2Help"></span>
+        </div>
+        <div class="agreebox" id="suAgreeBox">
+          <label class="agree all"><input type="checkbox" id="suAgreeAll">
+            <span><b>아래 내용에 모두 동의합니다</b></span></label>
+
+          <div class="agitem">
+            <label class="agree"><input type="checkbox" class="agreq" id="suTos">
+              <span><i class="must">필수</i> 이용약관에 동의합니다</span></label>
+            <button type="button" class="linkbtn agview" aria-expanded="false" aria-controls="txtTos">보기</button>
+          </div>
+          <div class="terms" id="txtTos" hidden>
+            <p><b>제1조 (서비스의 성격)</b><br>NEURIA는 뇌 MRI 영상에서 눈여겨볼 부분을 찾아 쉬운 말로 설명하고, 진료실에서 물어볼 질문을 정리해 주는 <b>학습·이해용 도구</b>입니다.</p>
+            <p><b>제2조 (의료행위가 아님)</b><br>본 서비스는 의료기기가 아니며 진단·치료·처방을 하지 않습니다. 분석 결과를 근거로 치료를 시작하거나 중단해서는 안 되며, 모든 의학적 판단은 담당 의사와 함께 하셔야 합니다.</p>
+            <p><b>제3조 (정확성의 한계)</b><br>분석 결과는 참고용이며 정확성을 보장하지 않습니다. 영상 한 장만을 보고 계산하므로 실제 소견과 다를 수 있습니다.</p>
+            <p><b>제4조 (이용자의 의무)</b><br>본인 또는 정당한 권한이 있는 영상만 올려야 합니다. 타인의 의료 영상을 동의 없이 올리는 것은 금지됩니다.</p>
+            <p><b>제5조 (계정과 기록의 보관)</b><br>계정과 분석 기록은 이용자의 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 <b>복구할 수 없습니다.</b> 복구 키로는 비밀번호만 재설정할 수 있습니다.</p>
+          </div>
+
+          <div class="agitem">
+            <label class="agree"><input type="checkbox" class="agreq" id="suPriv">
+              <span><i class="must">필수</i> 개인정보 수집·이용에 동의합니다</span></label>
+            <button type="button" class="linkbtn agview" aria-expanded="false" aria-controls="txtPriv">보기</button>
+          </div>
+          <div class="terms" id="txtPriv" hidden>
+            <table class="tms">
+              <tr><th>수집 항목</th><td>아이디, 이메일 주소, 이름(선택 입력)</td></tr>
+              <tr><th>이용 목적</th><td>로그인, 이메일 본인확인, 아이디 중복 방지</td></tr>
+              <tr><th>보관 기간</th><td>계정을 삭제하거나 브라우저 데이터를 지울 때까지</td></tr>
+            </table>
+            <p><b>이 브라우저에 저장되는 것</b><br>아이디·이메일·이름·분석 기록. 비밀번호에서 만든 열쇠로 암호화(AES-GCM 256)되어 저장되며, 비밀번호 자체는 어디에도 저장되지 않습니다.</p>
+            <p><b>서버에 저장되는 것</b><br>아이디와 <b>이메일의 해시값(SHA-256)</b>뿐입니다. 이메일 주소 원문은 인증번호를 보낼 때만 쓰이고 저장되지 않습니다.</p>
+            <p><b>MRI 영상</b><br>외부 서버로 전송되지 않습니다. 이 컴퓨터 안에서만 처리되며(학습 모델을 켠 경우 같은 컴퓨터에서 도는 분석 프로그램이 처리합니다) 영상 파일 자체는 저장되지 않습니다.</p>
+            <p>동의를 거부할 수 있으나, 거부하면 회원가입이 제한됩니다. 가입 없이 <b>둘러보기 모드</b>로 가이드와 FAQ는 볼 수 있습니다.</p>
+          </div>
+
+          <div class="agitem">
+            <label class="agree"><input type="checkbox" class="agreq" id="suAgree">
+              <span><i class="must">필수</i> 이 서비스가 <b>의료 진단을 제공하지 않는다</b>는 점을 확인했습니다</span></label>
+          </div>
+        </div>
+        <button class="btn primary full" id="btnSignup" disabled>다음</button>
+        <div class="authlinks">
+          <span>이미 계정이 있으신가요?</span><button class="strong" id="su2login">로그인하기</button>
+        </div>
+      </section>
+
+      <!-- 복구 키 -->
+      <section class="screen" id="scr-recovery" hidden>
+        <div class="steps">
+          <span class="st on"><i>✓</i>기본 정보</span><span class="bar"></span>
+          <span class="st on"><i>2</i>복구 키</span><span class="bar"></span>
+          <span class="st"><i>3</i>완료</span>
+        </div>
+        <h2>복구 키를 보관하세요</h2>
+        <p class="lede">비밀번호를 잊었을 때 <b>검사 기록을 되살릴 수 있는 유일한 열쇠</b>입니다. 이 화면을 떠나면 다시 볼 수 없습니다.</p>
+        <div class="keybox" id="recKey"></div>
+        <div class="rowbtn">
+          <button class="btn" id="copyRec">복사</button>
+          <button class="btn" id="dlRec">파일로 저장</button>
+        </div>
+        <label class="agree"><input type="checkbox" id="recSaved">
+          <span>복구 키를 안전한 곳에 적어 두었습니다. 분실 시 기록을 복구할 수 없다는 점을 이해합니다. (필수)</span></label>
+        <button class="btn primary full" id="btnRecDone">시작하기</button>
+      </section>
+
+      <!-- 아이디 찾기 -->
+      <section class="screen" id="scr-findid" hidden>
+        <h2>아이디 찾기</h2>
+        <p class="lede">가입할 때 쓴 이메일로 인증번호를 보내 확인합니다.</p>
+        <div class="err" id="err-findid" hidden></div>
+        <div class="field">
+          <label for="fiEmail">이메일</label>
+          <div class="inline">
+            <input id="fiEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="example@naver.com">
+            <button class="btn" id="fiSend">인증번호 받기</button>
+          </div>
+        </div>
+        <div class="vbox" id="fiBox" hidden>
+          <label for="fiCode">인증번호 6자리</label>
+          <div class="demobox" id="fiDemo" hidden>데모 모드 — 인증번호를 화면에 표시합니다.<span class="big" id="fiDemoCode"></span></div>
+          <div class="inline">
+            <input id="fiCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+            <button class="btn primary" id="fiCheck">확인</button>
+          </div>
+          <div class="inline-meta"><span class="help" id="fiTimer"></span></div>
+        </div>
+        <div class="vok" id="fiOk" hidden><span class="mk" aria-hidden="true">✓</span> 인증되었습니다.</div>
+        <div class="authlinks"><button id="fi2login">← 로그인으로</button></div>
+      </section>
+
+      <!-- 아이디 결과 -->
+      <section class="screen" id="scr-idresult" hidden>
+        <h2>아이디 확인</h2>
+        <p class="lede">이 이메일로 가입된 아이디입니다.</p>
+        <div class="found"><div class="id" id="foundId"></div><div class="when" id="foundWhen"></div></div>
+        <button class="btn primary full" id="btnIdDone">로그인하러 가기</button>
+      </section>
+
+      <!-- 비밀번호 찾기 -->
+      <section class="screen" id="scr-findpw" hidden>
+        <h2>비밀번호 찾기</h2>
+        <p class="lede">아이디와 가입 이메일이 모두 맞아야 재설정할 수 있습니다.</p>
+        <div class="err" id="err-findpw" hidden></div>
+        <div class="field"><label for="fpId">아이디</label><input id="fpId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+        <div class="field">
+          <label for="fpEmail">이메일</label>
+          <div class="inline">
+            <input id="fpEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false">
+            <button class="btn" id="fpSend">인증번호 받기</button>
+          </div>
+        </div>
+        <div class="vbox" id="fpBox" hidden>
+          <label for="fpCode">인증번호 6자리</label>
+          <div class="demobox" id="fpDemo" hidden>데모 모드 — 인증번호를 화면에 표시합니다.<span class="big" id="fpDemoCode"></span></div>
+          <div class="inline">
+            <input id="fpCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+            <button class="btn primary" id="fpCheck">확인</button>
+          </div>
+          <div class="inline-meta"><span class="help" id="fpTimer"></span></div>
+        </div>
+        <div class="vok" id="fpOk" hidden><span class="mk" aria-hidden="true">✓</span> 인증되었습니다.</div>
+        <div class="authlinks"><button id="fp2login">← 로그인으로</button></div>
+      </section>
+
+      <!-- 새 비밀번호 -->
+      <section class="screen" id="scr-newpw" hidden>
+        <h2>새 비밀번호 설정</h2>
+        <p class="lede" id="npLede">저장된 검사 기록은 이전 비밀번호로 잠겨 있습니다. 복구 키를 넣으면 기록까지 함께 살립니다.</p>
+        <div class="err" id="err-newpw" hidden></div>
+        <div class="field">
+          <label for="npPw">새 비밀번호</label>
+          <input id="npPw" type="password" autocomplete="new-password">
+          <div class="meter"><i id="npPwBar"></i></div>
+          <div class="pwreq" id="npPwReq"></div>
+        </div>
+        <div class="field"><label for="npPw2">새 비밀번호 확인</label><input id="npPw2" type="password" autocomplete="new-password"></div>
+        <div class="field" id="npRecField">
+          <label for="npRec">복구 키 (선택)</label>
+          <input id="npRec" type="text" autocomplete="off" spellcheck="false" placeholder="MRI-XXXX-XXXX-XXXX-XXXX-XXXX">
+          <span class="help">비워 두면 계정은 살아나지만 <b>저장된 회차 기록은 모두 삭제</b>됩니다.</span>
+        </div>
+        <button class="btn primary full" id="btnNewPw">비밀번호 변경</button>
+        <div class="authlinks"><button id="np2login">← 로그인으로</button></div>
+      </section>
+
+      <!-- 비밀번호 변경 -->
+      <section class="screen" id="scr-chpw" hidden>
+        <h2>비밀번호 변경</h2>
+        <p class="lede">현재 비밀번호를 확인한 뒤 새 비밀번호로 다시 봉인합니다. 기록은 그대로 유지됩니다.</p>
+        <div class="err" id="err-chpw" hidden></div>
+        <div class="field"><label for="cpOld">현재 비밀번호</label><input id="cpOld" type="password" autocomplete="current-password"></div>
+        <div class="field">
+          <label for="cpNew">새 비밀번호</label><input id="cpNew" type="password" autocomplete="new-password">
+          <div class="meter"><i id="cpBar"></i></div><div class="pwreq" id="cpPwReq"></div>
+        </div>
+        <div class="field"><label for="cpNew2">새 비밀번호 확인</label><input id="cpNew2" type="password" autocomplete="new-password"></div>
+        <button class="btn primary full" id="btnChPw">변경</button>
+        <div class="authlinks"><button id="cp2app">취소</button></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 앱 ══════════════ -->
+<div id="app" hidden>
+<div class="shell">
+  <aside class="side">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-5 .3A2.6 2.6 0 0 0 5 7.3a2.6 2.6 0 0 0 .4 4.2A2.6 2.6 0 0 0 7 16a2.5 2.5 0 0 0 5 .5zM12 4.5a2.5 2.5 0 0 1 5 .3 2.6 2.6 0 0 1 2 2.5 2.6 2.6 0 0 1-.4 4.2A2.6 2.6 0 0 1 17 16a2.5 2.5 0 0 1-5 .5z"/><path d="M12 4.5v15"/></svg>NEURIA</span>
+    <button class="navitem" data-go="analyze"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V8m0 0l-3 3m3-3l3 3"/><path d="M5 19h14"/></svg>MRI 분석하기</button>
+    <button class="navitem" data-go="result"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg>분석 결과</button>
+    <button class="navitem" data-go="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>분석 기록</button>
+    <button class="navitem" data-go="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h9a3 3 0 0 1 3 3v11a2.5 2.5 0 0 0-2.5-2.5H5z"/><path d="M19 5v14"/></svg>가이드</button>
+    <button class="navitem" data-go="faq"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2-2.4 3.4"/><path d="M12 17h.01"/></svg>자주 묻는 질문</button>
+    <button class="navitem" data-go="mypage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>마이페이지</button>
+    <span class="spacer"></span>
+    <div class="sidefoot">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-5 .3A2.6 2.6 0 0 0 5 7.3a2.6 2.6 0 0 0 .4 4.2A2.6 2.6 0 0 0 7 16a2.5 2.5 0 0 0 5 .5zM12 4.5a2.5 2.5 0 0 1 5 .3 2.6 2.6 0 0 1 2 2.5 2.6 2.6 0 0 1-.4 4.2A2.6 2.6 0 0 1 17 16a2.5 2.5 0 0 1-5 .5z"/><path d="M12 4.5v15"/></svg>NEURIA</span>
+      <p>뇌 MRI, 어렵지 않아요.<br>진단이 아닌 설명 서비스입니다.</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="appbar">
+      <h2 id="pageTitle">MRI 분석하기</h2>
+      <span class="who" id="who"></span>
+      <span class="chip" id="engineBadge">엔진</span>
+      <button class="iconbtn" id="themeBtn3" title="밝게 / 어둡게">◐</button>
+      <button class="iconbtn" id="acctBtn" data-go="mypage">계정</button>
+      <button class="iconbtn" id="lockBtn">로그아웃</button>
+      <button class="iconbtn" id="a11yBtn" data-go="mypage" aria-pressed="false" aria-controls="a11y">접근성</button>
+    </header>
+
+    <div class="content">
+
+      <!-- 분석하기 -->
+      <section class="page" data-page="analyze">
+        <div class="notice"><span class="ic">⚠</span><div><b>NEURIA는 진단을 하지 않습니다.</b> 영상에서 눈에 띄는 부분을 찾아 쉬운 말로 설명하고, 진료실에서 물어볼 거리를 정리해 주는 학습·이해용 도구입니다.</div></div>
+        <div class="card">
+          <div class="card-hd"><h3>MRI 분석하기</h3><span class="right tiny" id="secMode"></span></div>
+          <div class="card-pad">
+            <p class="tiny" style="margin:0 0 14px">뇌 MRI 이미지를 올리면 눈여겨볼 부위를 찾아 쉽게 설명해 드립니다.</p>
+            <div class="drop" id="film2">
+              <span class="upico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V7m0 0L8.5 10.5M12 7l3.5 3.5"/><path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5"/></svg></span>
+              <strong>MRI 이미지 파일을 올려주세요</strong>
+              <span>이 영역에 끌어다 놓거나 버튼을 누르세요 · PNG, JPG (최대 25MB)</span>
+              <input type="file" id="fileIn" accept="image/*" hidden>
+              <button class="btn primary" id="pickBtn">파일 선택하기</button>
+            </div>
+            <div class="sectitle">예시 이미지</div>
+            <div class="samples" id="samples"></div>
+            <p class="tiny" style="margin-top:10px">예시는 설명용으로 만든 합성 영상입니다. 실제 환자 영상이 아닙니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 분석 결과 -->
+      <section class="page" data-page="result" hidden>
+        <div class="viewer">
+          <div class="card">
+            <div class="film" id="film">
+              <canvas id="cv" width="800" height="800" aria-label="MRI 영상 뷰어"></canvas>
+              <div class="orient" id="orient" hidden><span>R · 환자 오른쪽</span><span>환자 왼쪽 · L</span></div>
+              <div class="empty" id="emptyState">
+                <strong style="color:var(--film-ink)">아직 분석한 영상이 없습니다</strong>
+                <span>왼쪽 메뉴의 <b>MRI 분석하기</b>에서 사진을 올려주세요</span>
+              </div>
+            </div>
+            <div class="filmbar">
+              <strong id="fbSeries">SERIES —</strong><span class="sep"></span>
+              <span id="fbSize">— × —</span><span class="sep"></span>
+              <span id="fbQuality">품질 —</span><span class="sep"></span>
+              <span id="fbTime">—</span>
+            </div>
+            <div class="controls">
+              <button class="btn sm" id="sampleBtn">예시 영상</button>
+              <div class="slider"><label for="alpha">표시 진하기</label><input type="range" id="alpha" min="0" max="100" value="55"></div>
+              <button class="iconbtn" id="ovBtn" aria-pressed="true">표시 켜짐</button>
+              <button class="iconbtn" id="cvdBtn" aria-pressed="false" title="색을 구분하기 어려울 때 켜세요. 테두리 모양으로도 구분됩니다.">색맹 모드 꺼짐</button>
+              <button class="btn sm" id="printBtn" style="margin-left:auto">PDF로 저장</button>
+            </div>
+            <div class="legend">
+              <span class="chip"><i class="dot good"></i>호전</span>
+              <span class="chip"><i class="dot bad"></i>악화</span>
+              <span class="chip"><i class="dot spread"></i>퍼짐</span>
+              <span class="chip"><i class="dot neutral"></i>신규·유지</span>
+              <span class="chip cvdhint">색맹 모드 켜짐 · 테두리 모양으로도 구분됩니다</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd"><h3>분석 결과</h3><span class="right tiny" id="scanLabel">아직 분석 전</span></div>
+            <div class="seg" role="tablist">
+              <button role="tab" id="tab-r" aria-selected="true" aria-controls="pane-r">요약</button>
+              <button role="tab" id="tab-g" aria-selected="false" aria-controls="pane-g">상세 설명</button>
+              <button role="tab" id="tab-q" aria-selected="false" aria-controls="pane-q">관련 정보</button>
+            </div>
+
+            <div class="tabpane" id="pane-r" role="tabpanel" aria-labelledby="tab-r">
+              <div class="verdict"><h3 id="vTitle">사진을 올리면 여기에 설명이 나옵니다</h3><span class="conf" id="vConf"></span></div>
+              <div class="summary-card">
+                <div class="ttl"><span class="mk">✦</span> 한눈에 보는 요약</div>
+                <div class="report" id="report"></div>
+              </div>
+              <div class="confbox" id="confWrap" hidden>
+                <div class="row">분석 신뢰도 <span class="pct" id="confPct">—</span></div>
+                <div class="track"><i class="fill" id="confBar"></i></div>
+                <p class="tiny" id="confNote" style="margin:8px 0 0">좌우 대칭 비교로 계산한 값입니다. 진단 확률이 아닙니다.</p>
+              </div>
+              <div class="check" id="checkBox" hidden>
+                <b>여기까지 이해되셨나요?</b>
+                <div class="row">
+                  <button class="btn sm" id="okBtn">이해했어요</button>
+                  <button class="btn sm" id="againBtn">더 쉽게 설명해 주세요</button>
+                  <button class="btn sm" id="ttsBtn">🔊 읽어주기</button>
+                </div>
+                <div id="checkMsg" style="margin-top:10px; color:var(--ink-2)" hidden></div>
+                <p class="tiny">읽어주기는 브라우저 음성 기능을 씁니다. 일부 브라우저는 온라인 음성을 써서 문장이 음성 서버로 갈 수 있으니, 민감한 내용은 오프라인 음성으로 설정한 뒤 사용하세요.</p>
+              </div>
+            </div>
+
+            <div class="tabpane" id="pane-g" role="tabpanel" aria-labelledby="tab-g" hidden>
+              <div class="sectitle">눈여겨볼 부위</div>
+              <div class="findings" id="findings"></div>
+              <div id="probsWrap" hidden>
+                <div class="sectitle" id="probsTitle">참고용 유형 추정 (데모 엔진)</div>
+                <div class="probs" id="probs"></div>
+              </div>
+              <div class="sectitle">용어 풀이</div>
+              <p class="tiny" style="margin:-4px 0 6px">요약에 밑줄로 표시된 낱말을 누르면 여기에서 강조됩니다.</p>
+              <dl class="glossary" id="glossary"></dl>
+            </div>
+
+            <div class="tabpane" id="pane-q" role="tabpanel" aria-labelledby="tab-q" hidden>
+              <div class="sectitle">의사에게 할 질문</div>
+              <p class="tiny" style="margin:-4px 0 12px">이번 영상 내용에 맞춰 만든 질문입니다. 진료 전에 복사해 두세요.</p>
+              <ol class="qlist" id="questions"><li>사진을 올리면 질문이 만들어집니다.</li></ol>
+              <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap">
+                <button class="btn sm" id="copyQ">질문 복사하기</button>
+                <button class="btn sm" id="ttsQ">🔊 질문 읽어주기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 분석 기록 -->
+      <section class="page" data-page="history" hidden>
+        <div class="card">
+          <div class="card-hd"><h3>분석 기록</h3><span class="right tiny" id="tlHint"></span></div>
+          <div class="tablewrap" id="tlScroll"></div>
+          <p class="empty-tl" id="tlEmpty">아직 저장된 회차가 없습니다. 분석 후 <b>이 회차 저장</b>을 누르면 다음 검사와 자동으로 비교해 호전·악화·퍼짐을 색으로 알려드립니다.</p>
+          <div class="tl-foot">
+            <button class="btn sm" id="saveScan" disabled>이 회차 저장</button>
+            <label>검사비 <input type="number" id="cost" placeholder="예: 480000" min="0" step="1000"></label>
+            <span id="costSum" class="mono">누적 —</span>
+            <button class="iconbtn" id="clearScans" style="margin-left:auto">기록 전체 삭제</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 가이드 -->
+      <section class="page" data-page="guide" hidden>
+        <div class="card">
+          <div class="card-hd"><h3>사용 가이드</h3></div>
+          <div class="card-pad">
+            <p class="tiny" style="margin:0 0 16px">NEURIA를 더 쉽게 이용하는 방법을 안내해 드립니다.</p>
+            <div class="steps3">
+              <div class="step3">
+                <span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V7m0 0L8.5 10.5M12 7l3.5 3.5"/><path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5"/></svg></span>
+                <h4>① 이미지 업로드</h4><p>MRI 이미지 파일을 올려주세요. 축상면(수평 단면)이 가장 잘 맞습니다.</p>
+              </div>
+              <div class="step3">
+                <span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+                <h4>② 분석 진행</h4><p>좌우를 맞대어 비교해 한쪽에만 두드러지는 부위를 찾습니다.</p>
+              </div>
+              <div class="step3">
+                <span class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                <h4>③ 결과 확인</h4><p>쉬운 말 설명과 용어 풀이, 의사에게 할 질문까지 확인할 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="sectitle">자세히</div>
+            <div class="acc">
+              <details open><summary>어떤 파일을 올릴 수 있나요?</summary><div class="body">PNG, JPG 이미지를 지원합니다. 진료 포털에서 받은 캡처 이미지나 사진도 괜찮습니다. 최대 25MB까지 올라갑니다. DICOM(.dcm) 원본은 아직 지원하지 않습니다.</div></details>
+              <details><summary>어떤 단면이 가장 좋나요?</summary><div class="body">머리를 수평으로 자른 <b>축상면(axial)</b>이 가장 잘 맞습니다. 이 도구는 좌우 대칭을 비교하므로, 좌우가 함께 보이고 기울어지지 않은 영상일수록 정확합니다. 학습 모델을 켠 경우에는 좌우 대칭이 아니라 사진 전체의 모양으로 유형을 추정합니다.</div></details>
+              <details><summary>부위 이름은 어떤 기준인가요?</summary><div class="body">축상면 기준이며, <b>영상의 왼쪽이 환자의 오른쪽</b>입니다(방사선과 표기 관례). 설명에 나오는 좌·우는 환자 기준입니다. 학습 모델 결과의 '주목 영역'에는 부위 이름을 붙이지 않습니다. 사진이 어느 방향 단면인지 알 수 없어 뇌엽 이름이 틀릴 수 있기 때문입니다.</div></details>
+              <details><summary>색은 무엇을 뜻하나요?</summary><div class="body">이전 회차와 비교해 <b>파랑은 호전</b>(줄어듦), <b>빨강은 악화</b>(커짐), <b>노랑은 퍼짐</b>(번짐)입니다. 비교할 이전 기록이 없으면 <b>보라색(신규)</b>으로 표시합니다. 색맹 모드를 켜면 테두리 모양(실선·긴점선·짧은점선)으로도 구분됩니다.</div></details>
+              <details><summary>결과를 저장하거나 인쇄할 수 있나요?</summary><div class="body">분석 결과 화면의 <b>PDF로 저장</b> 버튼을 누르면 인쇄 창이 열립니다. 대상에서 "PDF로 저장"을 고르면 파일로 남길 수 있습니다.</div></details>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="page" data-page="faq" hidden>
+        <div class="card">
+          <div class="card-hd"><h3>자주 묻는 질문</h3></div>
+          <div class="card-pad">
+            <div class="pills" id="faqPills">
+              <button data-cat="all" aria-pressed="true">전체</button>
+              <button data-cat="use" aria-pressed="false">서비스 이용</button>
+              <button data-cat="upload" aria-pressed="false">이미지 업로드</button>
+              <button data-cat="result" aria-pressed="false">분석 결과</button>
+              <button data-cat="privacy" aria-pressed="false">개인정보</button>
+            </div>
+            <div class="acc" id="faqList" style="margin-top:8px">
+              <details data-cat="use"><summary>NEURIA는 진단을 해주나요?</summary><div class="body">아니요. 진단은 의사만 할 수 있습니다. NEURIA는 영상에서 눈에 띄는 부분을 찾아 쉬운 말로 설명하고, 진료실에서 물어볼 질문을 정리해 주는 <b>이해용 도구</b>입니다.</div></details>
+              <details data-cat="upload"><summary>어떤 MRI 파일을 업로드할 수 있나요?</summary><div class="body">PNG, JPG 이미지 파일을 올릴 수 있습니다. 최대 25MB이며, 축상면 단면을 권장합니다.</div></details>
+              <details data-cat="result"><summary>분석 결과는 얼마나 걸리나요?</summary><div class="body">기본 분석은 브라우저 안에서 바로 계산해 보통 1초 안에 끝나고, 학습 모델을 켜면 몇 초 걸릴 수 있습니다. 어느 쪽이든 사진은 이 컴퓨터 밖으로 나가지 않습니다.</div></details>
+              <details data-cat="privacy"><summary>개인정보는 안전하게 보관되나요?</summary><div class="body">올린 사진은 저장하지 않습니다. 저장을 누른 회차만 축소본·좌표·수치 형태로 <b>암호화되어 이 브라우저에만</b> 남습니다. 이메일은 해시와 가려진 형태로만 보관하고, 비밀번호는 어디에도 저장하지 않습니다.</div></details>
+              <details data-cat="result"><summary>분석 결과를 병원에서 보여줘도 되나요?</summary><div class="body">참고 자료로는 괜찮지만, 진료의 근거가 되지는 않습니다. <b>의사에게 할 질문</b> 탭을 함께 보여드리면 대화에 도움이 됩니다.</div></details>
+              <details data-cat="use"><summary>무료로 이용할 수 있나요?</summary><div class="body">네. 학습·과제용으로 만든 서비스라 비용이 들지 않습니다.</div></details>
+              <details data-cat="privacy"><summary>다른 기기에서도 로그인할 수 있나요?</summary><div class="body">아니요. 기록을 서버에 두지 않는 설계라 계정은 가입한 브라우저에만 존재합니다. 아이디 중복만 서버에서 막습니다.</div></details>
+              <details data-cat="use"><summary>로그인할 때마다 인증번호를 받아야 하나요?</summary><div class="body">네. 비밀번호가 새어 나가도 메일함까지 뚫리지 않으면 로그인되지 않도록 매번 확인합니다.</div></details>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 마이페이지 -->
+      <section class="page" data-page="mypage" hidden>
+        <div class="card">
+          <div class="card-hd"><h3>내 계정</h3></div>
+          <div class="card-pad">
+            <dl class="kv" id="acctState"></dl>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:18px">
+              <button class="btn sm" id="chPwBtn">비밀번호 변경</button>
+              <button class="btn sm" id="newRecBtn">복구 키 재발급</button>
+              <button class="btn sm danger" id="delAcct">계정·기록 완전 삭제</button>
+            </div>
+            <p class="tiny" style="margin-top:12px">10분간 조작이 없으면 자동으로 로그아웃됩니다.</p>
+          </div>
+        </div>
+        <div class="card" id="a11y">
+          <div class="card-hd"><h3>접근성</h3></div>
+          <div class="card-pad settings-row">
+            <div class="grp"><span>글자 크기</span>
+              <div class="pillset" id="fsSet">
+                <button data-fs="1" aria-pressed="true">보통</button>
+                <button data-fs="1.15" aria-pressed="false">크게</button>
+                <button data-fs="1.32" aria-pressed="false">아주 크게</button>
+              </div>
+            </div>
+            <div class="grp"><span>색각 보조</span>
+              <div class="pillset" id="cvdSet">
+                <button data-cvd="off" aria-pressed="true">기본 색상</button>
+                <button data-cvd="on" aria-pressed="false">구분 강화 + 모양</button>
+              </div>
+            </div>
+            <div class="grp"><span>읽어주기 속도</span>
+              <input type="range" id="ttsRate" min="0.6" max="1.4" step="0.1" value="1" style="accent-color:var(--brand); width:120px">
+              <span class="mono" id="ttsRateVal">1.0×</span>
+            </div>
+          </div>
+        </div>
+        <div class="notice sec"><span class="ic">🔐</span><div><b>사진과 기록은 이 컴퓨터 밖으로 나가지 않습니다.</b> 외부 통신은 브라우저 정책(CSP)으로 차단했고, 저장되는 회차 기록은 비밀번호에서 만든 열쇠로 암호화(AES-GCM)됩니다.</div></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth-backend.js"></script>
+<script src="js/store.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/state.js"></script>
+<script src="js/viewer.js"></script>
+<script src="js/glossary.js"></script>
+<script src="js/report.js"></script>
+<script src="js/render.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

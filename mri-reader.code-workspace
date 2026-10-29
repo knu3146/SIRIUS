@@ -1,0 +1,58 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.encoding": "utf8",
+    "files.eol": "\n",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "editor.tabSize": 2,
+    "editor.detectIndentation": false,
+    "editor.rulers": [
+      100
+    ],
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.root": "/",
+    "livePreview.defaultPreviewPath": "/index.html",
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.vercel": true
+    },
+    "files.exclude": {
+      "**/.vercel": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.live-server",
+      "ritwickdey.liveserver",
+      "esbenp.prettier-vscode"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "▶ 서버 실행 (메일 인증 포함)",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/server.js",
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "skipFiles": [
+          "<node_internals>/**"
+        ]
+      },
+      {
+        "name": "Chrome로 열기 (localhost:3000)",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:3000/index.html",
+        "webRoot": "${workspaceFolder}"
+      }
+    ]
+  }
+}

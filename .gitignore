@@ -1,0 +1,23 @@
+.env*
+!.env.example
+.vercel
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+data/
+_backup*/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+# 학습 산출물과 데이터는 로컬 보관 (소스와 메타데이터만 공유)
+*.joblib
+*.keras
+*.h5
+*.hdf5
+*.pt
+*.pth
+datasets/
+kaggle.json

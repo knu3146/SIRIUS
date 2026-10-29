@@ -1,0 +1,14 @@
+{
+  "name": "HOG+RandomForest 시연용 v0.2",
+  "classes": [
+    "glioma_tumor",
+    "meningioma_tumor",
+    "pituitary_tumor",
+    "no_tumor"
+  ],
+  "sklearn_version": "1.9.1",
+  "sha256": "ccba383c9d3c74b9fcb027a8b88783b0664c67042ba2b8fde1ff121394426956",
+  "test_accuracy": 0.727,
+  "trained_on": "Brain Tumor Classification MRI (4-class, 분류 라벨만, 병변 마스크 없음)",
+  "trained_at": "2026-10-29"
+}

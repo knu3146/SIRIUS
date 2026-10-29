@@ -1,0 +1,1737 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  보안 정책
+  connect-src 'none' → fetch / XHR / WebSocket / beacon 전송 자체가 차단됨 (현재 데모 모드)
+  실제 서버(AuthBackend.server)를 쓸 때는 connect-src 에 API 주소를 추가해야 합니다.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: blob:; media-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>뇌 MRI 읽어주기</title>
+<style>
+:root{
+  --paper:#F1F3F4; --paper-2:#FFFFFF; --paper-3:#E7EAEC;
+  --ink:#151A1E; --ink-2:#56626A; --ink-3:#87939B;
+  --line:#D6DCDF; --line-2:#C2CACE;
+  --film:#0A0D10; --film-2:#12181D; --film-line:#28323A;
+  --film-ink:#D7E0E6; --film-ink-2:#8C99A3;
+  --accent:#1D6F66; --accent-2:#145049; --accent-ink:#FFFFFF; --accent-soft:#DCEBE8;
+  --good:#2F6FE0; --bad:#CF3636; --spread:#C98A06; --neutral:#7B858C;
+  --fs:1; --shadow:0 1px 2px rgba(18,28,34,.06), 0 8px 24px -12px rgba(18,28,34,.22);
+  --r:10px;
+  --f-ui:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  --f-mono:ui-monospace,"Cascadia Mono",Consolas,"D2Coding",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1114; --paper-2:#141A1F; --paper-3:#1B2329;
+    --ink:#E7EDF0; --ink-2:#9BA8B0; --ink-3:#77848C;
+    --line:#252F36; --line-2:#334048;
+    --accent:#58B9AD; --accent-2:#8AD5CB; --accent-ink:#04130F; --accent-soft:#11302C;
+    --good:#5C9CFF; --bad:#FF6B6B; --spread:#E5B347; --neutral:#8B969E;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1114; --paper-2:#141A1F; --paper-3:#1B2329;
+  --ink:#E7EDF0; --ink-2:#9BA8B0; --ink-3:#77848C;
+  --line:#252F36; --line-2:#334048;
+  --accent:#58B9AD; --accent-2:#8AD5CB; --accent-ink:#04130F; --accent-soft:#11302C;
+  --good:#5C9CFF; --bad:#FF6B6B; --spread:#E5B347; --neutral:#8B969E;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+}
+:root[data-cvd="on"]{ --good:#0072B2; --bad:#D55E00; --spread:#E8C547; }
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--f-ui); font-size:calc(15px * var(--fs)); line-height:1.65;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:var(--f-ui); font-weight:700; letter-spacing:-.022em; text-wrap:balance; margin:0}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+.mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px; margin:0 auto; padding-inline:16px}
+
+/* ── 인증 화면 ──────────────────────── */
+.gate{position:fixed; inset:0; z-index:100; background:var(--paper); display:grid; place-items:start center; padding:clamp(16px,6vh,56px) 16px 40px; overflow:auto}
+.gatecard{width:100%; max-width:404px; background:var(--paper-2); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:24px 24px 20px}
+.glogo{display:flex; align-items:center; gap:8px; font-weight:700; font-size:calc(15px * var(--fs)); letter-spacing:-.02em; margin-bottom:18px}
+.glogo .mk{width:26px; height:26px; border-radius:8px; background:var(--accent-soft); color:var(--accent-2); display:grid; place-items:center; font-size:14px}
+:root[data-theme="dark"] .glogo .mk{color:var(--accent)}
+.glogo .sub{margin-left:auto; font-size:calc(11px * var(--fs)); color:var(--ink-3); font-weight:500; letter-spacing:.04em}
+.screen h2{font-size:calc(19px * var(--fs))}
+.screen .lede{margin:6px 0 16px; color:var(--ink-2); font-size:calc(13px * var(--fs)); line-height:1.6}
+.steps{display:flex; gap:5px; margin-bottom:14px}
+.steps i{height:3px; flex:1; border-radius:2px; background:var(--paper-3)}
+.steps i.on{background:var(--accent)}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:12px}
+.field label{font-size:calc(12.5px * var(--fs)); color:var(--ink-2); font-weight:500}
+.field input{border:1px solid var(--line); background:var(--paper); border-radius:8px; padding:9px 11px; font-size:calc(14px * var(--fs)); width:100%}
+.field input:focus{border-color:var(--accent); outline:none; box-shadow:0 0 0 3px var(--accent-soft)}
+.field .help{font-size:calc(11.5px * var(--fs)); color:var(--ink-3)}
+.field .help.ok{color:var(--good)} .field .help.no{color:var(--bad)}
+.code-in{font-family:var(--f-mono); font-size:calc(20px * var(--fs)) !important; letter-spacing:.34em; text-align:center; text-transform:uppercase}
+.inline{display:flex; gap:8px; align-items:stretch}
+.inline input{flex:1; min-width:0}
+.inline .btn{flex:none; white-space:nowrap; padding-inline:12px}
+.inline-meta{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px}
+.linkbtn{border:0; background:none; color:var(--accent-2); font-size:calc(12px * var(--fs)); font-weight:600; padding:0}
+:root[data-theme="dark"] .linkbtn{color:var(--accent)}
+.linkbtn:disabled{color:var(--ink-3); font-weight:400; cursor:not-allowed}
+.vbox{border:1px solid var(--line); border-radius:9px; padding:12px; margin-bottom:12px; background:var(--paper)}
+.vbox > label{display:block; font-size:calc(12.5px * var(--fs)); color:var(--ink-2); font-weight:500; margin-bottom:5px}
+.vok{display:flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--fs)); color:var(--good); font-weight:600; margin-bottom:12px}
+.vok .mk{width:17px; height:17px; border-radius:50%; background:var(--good); color:var(--paper-2); display:grid; place-items:center; font-size:11px}
+.agree{display:flex; gap:9px; align-items:flex-start; margin:4px 0 14px; font-size:calc(12.5px * var(--fs)); color:var(--ink-2)}
+.agree input{margin-top:3px; accent-color:var(--accent); flex:none}
+.full{width:100%; justify-content:center; margin-top:2px}
+.links{margin-top:14px; padding-top:13px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:center; font-size:calc(12.5px * var(--fs))}
+.links button{border:0; background:none; color:var(--ink-2); padding:2px 0}
+.links button:hover{color:var(--accent-2)}
+.links .strong{color:var(--accent-2); font-weight:600}
+:root[data-theme="dark"] .links .strong, :root[data-theme="dark"] .links button:hover{color:var(--accent)}
+.err{margin:0 0 12px; font-size:calc(12.5px * var(--fs)); color:var(--bad); background:color-mix(in srgb, var(--bad) 10%, transparent); border-radius:7px; padding:8px 10px}
+.okmsg{margin:0 0 12px; font-size:calc(12.5px * var(--fs)); color:var(--accent-2); background:var(--accent-soft); border-radius:7px; padding:8px 10px}
+:root[data-theme="dark"] .okmsg{color:var(--accent)}
+.meter{height:4px; border-radius:99px; background:var(--paper-3); overflow:hidden; margin-top:6px}
+.meter i{display:block; height:100%; width:0; background:var(--bad); transition:width .2s, background .2s}
+.note{margin-top:14px; font-size:calc(11.8px * var(--fs)); color:var(--ink-2); line-height:1.65; border-left:2px solid var(--line-2); padding-left:10px}
+.demobox{
+  border:1px dashed var(--spread); border-radius:9px; padding:11px 12px; margin-bottom:13px;
+  font-size:calc(12.5px * var(--fs)); color:var(--ink-2); background:color-mix(in srgb, var(--spread) 8%, transparent);
+}
+.demobox .big{font-family:var(--f-mono); font-size:calc(24px * var(--fs)); letter-spacing:.3em; color:var(--ink); font-weight:500; display:block; margin:4px 0 2px}
+.keybox{
+  font-family:var(--f-mono); font-size:calc(15px * var(--fs)); background:var(--paper); border:1px solid var(--line-2);
+  border-radius:9px; padding:13px; text-align:center; word-break:break-all; letter-spacing:.04em; margin-bottom:12px;
+}
+.rowbtn{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+.rowbtn .btn{flex:1}
+.found{background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:13px; margin-bottom:12px; text-align:center}
+.found .id{font-family:var(--f-mono); font-size:calc(19px * var(--fs)); font-weight:500}
+.found .when{font-size:calc(11.5px * var(--fs)); color:var(--ink-3); margin-top:3px}
+
+/* ── 헤더 ───────────────────────────── */
+.topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line)}
+.topbar-in{display:flex; align-items:center; gap:10px; padding-block:11px; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:9px; margin-right:auto}
+.brand h1{font-size:calc(19px * var(--fs))}
+.brand .sub{font-size:calc(11.5px * var(--fs)); color:var(--ink-2); letter-spacing:.06em; text-transform:uppercase}
+.engine{font-family:var(--f-mono); font-size:calc(11px * var(--fs)); border:1px dashed var(--line-2); color:var(--ink-2); padding:3px 8px; border-radius:99px}
+.who{font-size:calc(12.5px * var(--fs)); color:var(--ink-2)}
+.who b{color:var(--ink)}
+.iconbtn{background:var(--paper-2); border:1px solid var(--line); border-radius:8px; padding:6px 11px; font-size:calc(13px * var(--fs)); color:var(--ink-2)}
+.iconbtn:hover{border-color:var(--line-2); color:var(--ink)}
+.iconbtn[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--accent)}
+
+.notice{display:flex; gap:10px; align-items:flex-start; border-left:3px solid var(--spread); background:var(--paper-2); padding:11px 14px; margin-top:16px; border-radius:0 var(--r) var(--r) 0; font-size:calc(13px * var(--fs)); color:var(--ink-2); box-shadow:var(--shadow)}
+.notice b{color:var(--ink); font-weight:600}
+.notice.sec{border-left-color:var(--accent)}
+
+.stage{display:grid; grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr); gap:18px; margin-top:18px}
+@media (max-width:900px){ .stage{grid-template-columns:1fr} }
+.col{display:flex; flex-direction:column; gap:14px; min-width:0}
+.panel{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow)}
+.panel-hd{display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line)}
+.panel-hd h2{font-size:calc(14.5px * var(--fs))}
+.panel-hd .hint{margin-left:auto; font-size:calc(11.5px * var(--fs)); color:var(--ink-3)}
+
+.film{position:relative; background:var(--film); border-radius:var(--r) var(--r) 0 0; overflow:hidden; aspect-ratio:1/1; display:grid; place-items:center}
+.film canvas{width:100%; height:100%; display:block; touch-action:manipulation}
+.film .empty{position:absolute; inset:0; display:grid; place-content:center; gap:10px; justify-items:center; color:var(--film-ink-2); text-align:center; padding:24px; font-size:calc(13.5px * var(--fs))}
+.film.drag{outline:2px dashed var(--accent); outline-offset:-8px}
+.filmbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 12px; background:var(--film-2); border-top:1px solid var(--film-line); color:var(--film-ink-2); font-size:calc(11.5px * var(--fs)); font-family:var(--f-mono)}
+.filmbar .sep{width:1px; height:14px; background:var(--film-line)}
+.filmbar strong{color:var(--film-ink); font-weight:500}
+.orient{position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:calc(11px * var(--fs)); color:var(--film-ink-2); pointer-events:none}
+.orient span{background:rgba(10,13,16,.6); padding:2px 6px; border-radius:4px}
+
+.controls{display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 14px}
+.btn{border:1px solid var(--line); background:var(--paper-2); border-radius:8px; padding:8px 14px; font-size:calc(13.5px * var(--fs)); font-weight:500; color:var(--ink); display:inline-flex; align-items:center; gap:6px}
+.btn:hover{border-color:var(--line-2)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-2)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad); border-color:color-mix(in srgb, var(--bad) 40%, var(--line))}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.slider{display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--fs)); color:var(--ink-2)}
+.slider input[type=range]{width:96px; accent-color:var(--accent)}
+
+.legend{display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 14px}
+.chip{display:inline-flex; align-items:center; gap:6px; font-size:calc(12px * var(--fs)); border:1px solid var(--line); border-radius:99px; padding:4px 10px 4px 7px; color:var(--ink-2); background:var(--paper-2)}
+.dot{width:10px; height:10px; border-radius:3px; flex:none}
+.dot.good{background:var(--good)} .dot.bad{background:var(--bad)}
+.dot.spread{background:var(--spread)} .dot.neutral{background:var(--neutral)}
+:root[data-cvd="on"] .dot.bad{border-radius:50%}
+:root[data-cvd="on"] .dot.spread{transform:rotate(45deg)}
+
+.seg{display:flex; gap:4px; background:var(--paper-3); padding:3px; border-radius:9px; margin:14px 14px 0}
+.seg button{flex:1; border:0; background:transparent; border-radius:7px; padding:7px 4px; font-size:calc(13px * var(--fs)); color:var(--ink-2); font-weight:500}
+.seg button[aria-selected="true"]{background:var(--paper-2); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tabpane{padding:14px}
+
+.verdict{display:flex; align-items:baseline; gap:10px; padding-bottom:10px; border-bottom:1px solid var(--line); margin-bottom:12px; flex-wrap:wrap}
+.verdict h3{font-size:calc(17px * var(--fs))}
+.verdict .conf{font-size:calc(12px * var(--fs)); color:var(--ink-2); margin-left:auto}
+.report{font-size:calc(14.5px * var(--fs)); line-height:1.85}
+.report p{margin:0 0 10px}
+.term{border:0; background:none; padding:0; font:inherit; border-bottom:1.5px dotted var(--accent); color:var(--accent-2)}
+:root[data-theme="dark"] .term{color:var(--accent)}
+
+.findings{display:flex; flex-direction:column; gap:8px; margin-top:6px}
+.finding{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:var(--paper)}
+.finding .bar{width:4px; align-self:stretch; border-radius:2px; min-height:34px}
+.finding .nm{font-weight:600; font-size:calc(13.5px * var(--fs))}
+.finding .ds{font-size:calc(12px * var(--fs)); color:var(--ink-2)}
+.tag{font-size:calc(11.5px * var(--fs)); font-weight:600; padding:3px 9px; border-radius:99px; border:1px solid currentColor}
+.t-good{color:var(--good)} .t-bad{color:var(--bad)} .t-spread{color:var(--spread)} .t-neutral{color:var(--neutral)}
+
+.probs{display:flex; flex-direction:column; gap:7px; margin-top:4px}
+.prob{display:grid; grid-template-columns:96px 1fr 44px; gap:9px; align-items:center; font-size:calc(12.5px * var(--fs))}
+.prob .track{height:7px; border-radius:99px; background:var(--paper-3); overflow:hidden}
+.prob .fill{height:100%; background:var(--accent); border-radius:99px}
+.prob .pct{text-align:right; color:var(--ink-2)}
+
+.glossary{display:flex; flex-direction:column}
+.gitem{border-bottom:1px solid var(--line); padding:11px 2px}
+.gitem:last-child{border-bottom:0}
+.gitem dt{font-weight:600; font-size:calc(14px * var(--fs)); display:flex; gap:8px; align-items:baseline}
+.gitem dt .en{font-family:var(--f-mono); font-size:calc(11.5px * var(--fs)); color:var(--ink-3); font-weight:400}
+.gitem dd{margin:3px 0 0; font-size:calc(13.5px * var(--fs)); color:var(--ink-2)}
+.gitem.hit{background:var(--accent-soft); border-radius:8px; padding-inline:10px}
+
+.qlist{counter-reset:q; display:flex; flex-direction:column; gap:9px; margin:0; padding:0; list-style:none}
+.qlist li{counter-increment:q; display:grid; grid-template-columns:auto 1fr; gap:11px; font-size:calc(14px * var(--fs)); line-height:1.6}
+.qlist li::before{content:counter(q); font-family:var(--f-mono); font-size:calc(11.5px * var(--fs)); color:var(--accent); border:1px solid var(--accent); border-radius:50%; width:21px; height:21px; display:grid; place-items:center; margin-top:3px}
+
+.check{margin-top:14px; padding:13px; border:1px solid var(--line); border-radius:9px; background:var(--paper); font-size:calc(13.5px * var(--fs))}
+.check .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:9px}
+.tiny{font-size:calc(11.5px * var(--fs)); color:var(--ink-3); margin-top:9px; line-height:1.6}
+
+.timeline{margin-top:18px}
+.tl-scroll{display:flex; gap:12px; overflow-x:auto; padding:14px; scrollbar-width:thin}
+.tlcard{flex:0 0 172px; border:1px solid var(--line); border-radius:9px; overflow:hidden; background:var(--paper); text-align:left; padding:0; display:flex; flex-direction:column}
+.tlcard[aria-current="true"]{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft)}
+.tlcard img{width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--film); display:block}
+.tlcard .meta{padding:8px 10px; display:flex; flex-direction:column; gap:3px}
+.tlcard .nth{font-size:calc(12.5px * var(--fs)); font-weight:600}
+.tlcard .dt{font-size:calc(11px * var(--fs)); color:var(--ink-3); font-family:var(--f-mono)}
+.tl-foot{display:flex; gap:14px; flex-wrap:wrap; align-items:center; padding:0 14px 14px; font-size:calc(12.5px * var(--fs)); color:var(--ink-2)}
+.tl-foot input{width:110px; padding:5px 8px; border:1px solid var(--line); border-radius:7px; background:var(--paper-2); font-family:var(--f-mono)}
+.empty-tl{padding:0 14px 16px; color:var(--ink-3); font-size:calc(13px * var(--fs))}
+
+.drawer{border-top:1px solid var(--line); background:var(--paper-2)}
+.drawer-in{display:flex; gap:18px; flex-wrap:wrap; padding-block:12px; align-items:center; font-size:calc(13px * var(--fs))}
+.grp{display:flex; align-items:center; gap:7px}
+.grp>span{color:var(--ink-2)}
+.pillset{display:flex; gap:3px; background:var(--paper-3); padding:3px; border-radius:8px}
+.pillset button{border:0; background:transparent; border-radius:6px; padding:4px 11px; font-size:calc(12.5px * var(--fs)); color:var(--ink-2)}
+.pillset button[aria-pressed="true"]{background:var(--paper-2); color:var(--ink); font-weight:600}
+
+footer{margin:28px 0 40px; color:var(--ink-3); font-size:calc(12px * var(--fs)); line-height:1.7}
+footer b{color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){ .finding,.tlcard,.btn{transition:border-color .15s ease, background .15s ease, box-shadow .15s ease} }
+</style>
+</head>
+<body>
+
+<!-- ══════════ 인증 ══════════ -->
+<div class="gate" id="gate">
+  <div class="gatecard">
+    <div class="glogo"><span class="mk" aria-hidden="true">🧠</span> 뇌 MRI 읽어주기 <span class="sub" id="backendBadge"></span></div>
+
+    <!-- 로그인 -->
+    <section class="screen" id="scr-login">
+      <h2>로그인</h2>
+      <p class="lede">아이디 또는 이메일과 비밀번호를 입력하세요.</p>
+      <div class="err" id="err-login" hidden></div>
+      <div class="okmsg" id="ok-login" hidden></div>
+      <div class="field">
+        <label for="loginId">아이디 또는 이메일</label>
+        <input id="loginId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="loginPw">비밀번호</label>
+        <input id="loginPw" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn primary full" id="btnLogin">로그인</button>
+      <div class="links">
+        <button class="strong" id="goSignup">회원가입</button>
+        <button id="goFindId">아이디 찾기</button>
+        <button id="goFindPw">비밀번호 찾기</button>
+      </div>
+      <p class="note">계정과 검사 기록은 <b>이 브라우저 안에만</b> 저장되고 외부로 전송되지 않습니다. 가입 없이 분석만 보려면 <button class="linklike" id="goGuest" style="border:0;background:none;color:inherit;text-decoration:underline;padding:0">둘러보기로 열기</button>.</p>
+    </section>
+
+    <!-- 회원가입 -->
+    <section class="screen" id="scr-signup" hidden>
+      <div class="steps"><i class="on"></i><i id="suStep2"></i></div>
+      <h2>회원가입</h2>
+      <p class="lede">이메일 인증을 마쳐야 가입이 완료됩니다.</p>
+      <div class="err" id="err-signup" hidden></div>
+      <div class="field">
+        <label for="suId">아이디</label>
+        <input id="suId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="영문·숫자·밑줄 4~20자">
+        <span class="help" id="suIdHelp">로그인에 사용합니다.</span>
+      </div>
+      <div class="field">
+        <label for="suEmail">이메일</label>
+        <div class="inline">
+          <input id="suEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="example@domain.com">
+          <button class="btn" id="suSend">인증번호 받기</button>
+        </div>
+        <span class="help">아이디·비밀번호 찾기에만 사용하며, 가려진 형태로만 저장됩니다.</span>
+      </div>
+      <div class="vbox" id="suBox" hidden>
+        <label for="suCode">인증번호 6자리</label>
+        <div class="demobox" id="suDemo" hidden>
+          데모 모드 — 메일 서버가 없어 인증번호를 화면에 표시합니다.
+          <span class="big" id="suDemoCode"></span>
+          실제 서버를 연결하면 이 값은 메일로만 전달됩니다.
+        </div>
+        <div class="inline">
+          <input id="suCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+          <button class="btn" id="suCheck">확인</button>
+        </div>
+        <div class="inline-meta">
+          <span class="help" id="suTimer"></span>
+        </div>
+      </div>
+      <div class="vok" id="suOk" hidden><span class="mk" aria-hidden="true">✓</span> 이메일 인증이 완료되었습니다.</div>
+      <div class="field">
+        <label for="suPw">비밀번호</label>
+        <input id="suPw" type="password" autocomplete="new-password">
+        <div class="meter"><i id="suPwBar"></i></div>
+        <span class="help" id="suPwHelp">8자 이상. 영문 대소문자·숫자·기호를 섞으면 더 안전합니다.</span>
+      </div>
+      <div class="field">
+        <label for="suPw2">비밀번호 확인</label>
+        <input id="suPw2" type="password" autocomplete="new-password">
+        <span class="help" id="suPw2Help"></span>
+      </div>
+      <label class="agree"><input type="checkbox" id="suAgree">
+        <span>이 서비스가 <b>의료 진단을 제공하지 않으며</b>, 입력한 영상·기록이 이 기기에만 저장된다는 점을 확인했습니다. (필수)</span></label>
+      <button class="btn primary full" id="btnSignup" disabled>회원가입 완료</button>
+      <div class="links"><button id="su2login">← 로그인으로 돌아가기</button></div>
+    </section>
+
+    <!-- 복구 키 -->
+    <section class="screen" id="scr-recovery" hidden>
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <h2>복구 키를 보관하세요</h2>
+      <p class="lede">가입이 끝났습니다. 비밀번호를 잊었을 때 <b>검사 기록을 되살릴 수 있는 유일한 열쇠</b>입니다. 이 화면을 떠나면 다시 볼 수 없습니다.</p>
+      <div class="keybox" id="recKey"></div>
+      <div class="rowbtn">
+        <button class="btn" id="copyRec">복사</button>
+        <button class="btn" id="dlRec">파일로 저장</button>
+      </div>
+      <label class="agree"><input type="checkbox" id="recSaved">
+        <span>복구 키를 안전한 곳에 적어 두었습니다. 분실 시 기록을 복구할 수 없다는 점을 이해합니다. (필수)</span></label>
+      <button class="btn primary full" id="btnRecDone">시작하기</button>
+    </section>
+
+    <!-- 아이디 찾기 -->
+    <section class="screen" id="scr-findid" hidden>
+      <h2>아이디 찾기</h2>
+      <p class="lede">가입할 때 쓴 이메일로 인증번호를 보내 확인합니다.</p>
+      <div class="err" id="err-findid" hidden></div>
+      <div class="field">
+        <label for="fiEmail">이메일</label>
+        <div class="inline">
+          <input id="fiEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false">
+          <button class="btn" id="fiSend">인증번호 받기</button>
+        </div>
+      </div>
+      <div class="vbox" id="fiBox" hidden>
+        <label for="fiCode">인증번호 6자리</label>
+        <div class="demobox" id="fiDemo" hidden>
+          데모 모드 — 인증번호를 화면에 표시합니다.
+          <span class="big" id="fiDemoCode"></span>
+        </div>
+        <div class="inline">
+          <input id="fiCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+          <button class="btn primary" id="fiCheck">확인</button>
+        </div>
+        <div class="inline-meta">
+          <span class="help" id="fiTimer"></span>
+        </div>
+      </div>
+      <div class="vok" id="fiOk" hidden><span class="mk" aria-hidden="true">✓</span> 인증되었습니다.</div>
+      <div class="links"><button id="fi2login">← 로그인으로</button></div>
+    </section>
+
+    <!-- 아이디 결과 -->
+    <section class="screen" id="scr-idresult" hidden>
+      <h2>아이디 확인</h2>
+      <p class="lede">이 이메일로 가입된 아이디입니다.</p>
+      <div class="found"><div class="id" id="foundId"></div><div class="when" id="foundWhen"></div></div>
+      <button class="btn primary full" id="btnIdDone">로그인하러 가기</button>
+    </section>
+
+    <!-- 비밀번호 찾기 -->
+    <section class="screen" id="scr-findpw" hidden>
+      <h2>비밀번호 찾기</h2>
+      <p class="lede">아이디와 가입 이메일이 모두 맞아야 재설정할 수 있습니다.</p>
+      <div class="err" id="err-findpw" hidden></div>
+      <div class="field">
+        <label for="fpId">아이디</label>
+        <input id="fpId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="fpEmail">이메일</label>
+        <div class="inline">
+          <input id="fpEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false">
+          <button class="btn" id="fpSend">인증번호 받기</button>
+        </div>
+      </div>
+      <div class="vbox" id="fpBox" hidden>
+        <label for="fpCode">인증번호 6자리</label>
+        <div class="demobox" id="fpDemo" hidden>
+          데모 모드 — 인증번호를 화면에 표시합니다.
+          <span class="big" id="fpDemoCode"></span>
+        </div>
+        <div class="inline">
+          <input id="fpCode" class="code-in" type="text" autocomplete="one-time-code" maxlength="6" placeholder="AB3K9Z">
+          <button class="btn primary" id="fpCheck">확인</button>
+        </div>
+        <div class="inline-meta">
+          <span class="help" id="fpTimer"></span>
+        </div>
+      </div>
+      <div class="vok" id="fpOk" hidden><span class="mk" aria-hidden="true">✓</span> 인증되었습니다.</div>
+      <div class="links"><button id="fp2login">← 로그인으로</button></div>
+    </section>
+
+    <!-- 새 비밀번호 -->
+    <section class="screen" id="scr-newpw" hidden>
+      <h2>새 비밀번호 설정</h2>
+      <p class="lede" id="npLede">저장된 검사 기록은 이전 비밀번호로 잠겨 있습니다. 복구 키를 넣으면 기록까지 함께 살립니다.</p>
+      <div class="err" id="err-newpw" hidden></div>
+      <div class="field">
+        <label for="npPw">새 비밀번호</label>
+        <input id="npPw" type="password" autocomplete="new-password">
+        <div class="meter"><i id="npPwBar"></i></div>
+      </div>
+      <div class="field">
+        <label for="npPw2">새 비밀번호 확인</label>
+        <input id="npPw2" type="password" autocomplete="new-password">
+      </div>
+      <div class="field" id="npRecField">
+        <label for="npRec">복구 키 (선택)</label>
+        <input id="npRec" type="text" autocomplete="off" spellcheck="false" placeholder="MRI-XXXX-XXXX-XXXX-XXXX-XXXX">
+        <span class="help">비워 두면 계정은 살아나지만 <b>저장된 회차 기록은 모두 삭제</b>됩니다.</span>
+      </div>
+      <button class="btn primary full" id="btnNewPw">비밀번호 변경</button>
+      <div class="links"><button id="np2login">← 로그인으로</button></div>
+    </section>
+
+    <!-- 비밀번호 변경(로그인 상태) -->
+    <section class="screen" id="scr-chpw" hidden>
+      <h2>비밀번호 변경</h2>
+      <p class="lede">현재 비밀번호를 확인한 뒤 새 비밀번호로 다시 봉인합니다. 기록은 그대로 유지됩니다.</p>
+      <div class="err" id="err-chpw" hidden></div>
+      <div class="field"><label for="cpOld">현재 비밀번호</label><input id="cpOld" type="password" autocomplete="current-password"></div>
+      <div class="field"><label for="cpNew">새 비밀번호</label><input id="cpNew" type="password" autocomplete="new-password"><div class="meter"><i id="cpBar"></i></div></div>
+      <div class="field"><label for="cpNew2">새 비밀번호 확인</label><input id="cpNew2" type="password" autocomplete="new-password"></div>
+      <button class="btn primary full" id="btnChPw">변경</button>
+      <div class="links"><button id="cp2app">취소</button></div>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ 본문 ══════════ -->
+<div id="app" hidden>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand"><h1>뇌 MRI 읽어주기</h1><span class="sub">Brain MRI Explainer</span></div>
+    <span class="who" id="who"></span>
+    <span class="engine" id="engineBadge">엔진 · 데모 휴리스틱 v0.1</span>
+    <button class="iconbtn" id="acctBtn">계정</button>
+    <button class="iconbtn" id="lockBtn">로그아웃</button>
+    <button class="iconbtn" id="a11yBtn" aria-pressed="false" aria-controls="a11y">접근성</button>
+  </div>
+  <div class="drawer" id="a11y" hidden>
+    <div class="wrap drawer-in">
+      <div class="grp"><span>글자 크기</span>
+        <div class="pillset" id="fsSet">
+          <button data-fs="1" aria-pressed="true">보통</button>
+          <button data-fs="1.15" aria-pressed="false">크게</button>
+          <button data-fs="1.32" aria-pressed="false">아주 크게</button>
+        </div>
+      </div>
+      <div class="grp"><span>색각 보조</span>
+        <div class="pillset" id="cvdSet">
+          <button data-cvd="off" aria-pressed="true">기본 색상</button>
+          <button data-cvd="on" aria-pressed="false">구분 강화 + 모양</button>
+        </div>
+      </div>
+      <div class="grp"><span>읽어주기 속도</span>
+        <input type="range" id="ttsRate" min="0.6" max="1.4" step="0.1" value="1" style="accent-color:var(--accent); width:110px">
+        <span class="mono" id="ttsRateVal">1.0×</span>
+      </div>
+    </div>
+  </div>
+  <div class="drawer" id="acct" hidden>
+    <div class="wrap drawer-in">
+      <div class="grp"><span id="acctState"></span></div>
+      <button class="btn" id="chPwBtn">비밀번호 변경</button>
+      <button class="btn" id="newRecBtn">복구 키 재발급</button>
+      <button class="btn danger" id="delAcct">계정·기록 완전 삭제</button>
+      <span style="color:var(--ink-3); font-size:calc(11.5px * var(--fs))">10분간 조작이 없으면 자동 로그아웃됩니다.</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice">
+    <span aria-hidden="true">⚠</span>
+    <div><b>이 사이트는 진단을 하지 않습니다.</b> 영상에서 눈에 띄는 부분을 찾아 쉬운 말로 설명하고, 진료실에서 물어볼 거리를 정리해 주는 학습·이해용 도구입니다. 실제 판독과 치료 결정은 반드시 담당 의사에게 확인하세요.</div>
+  </div>
+  <div class="notice sec">
+    <span aria-hidden="true">🔐</span>
+    <div><b>사진과 기록은 이 브라우저 밖으로 나가지 않습니다.</b> 외부 통신은 브라우저 정책(CSP)으로 차단했고, 저장되는 회차 기록은 비밀번호에서 만든 열쇠로 암호화(AES-GCM)됩니다. <span id="secMode"></span></div>
+  </div>
+
+  <div class="stage">
+    <div class="col">
+      <section class="panel">
+        <div class="film" id="film">
+          <canvas id="cv" width="800" height="800" aria-label="MRI 영상 뷰어"></canvas>
+          <div class="orient" id="orient" hidden><span>R · 환자 오른쪽</span><span>환자 왼쪽 · L</span></div>
+          <div class="empty" id="emptyState">
+            <strong style="color:var(--film-ink); font-size:calc(15px * var(--fs))">MRI 사진을 올려주세요</strong>
+            <span>파일을 이 영역에 끌어다 놓거나, 아래 버튼을 누르세요<br>(JPG · PNG 캡처 이미지, 축상면(axial) 단면 권장)</span>
+          </div>
+        </div>
+        <div class="filmbar">
+          <strong id="fbSeries">SERIES —</strong><span class="sep"></span>
+          <span id="fbSize">— × —</span><span class="sep"></span>
+          <span id="fbQuality">품질 —</span><span class="sep"></span>
+          <span id="fbTime">—</span>
+        </div>
+        <div class="controls">
+          <input type="file" id="fileIn" accept="image/*" hidden>
+          <button class="btn primary" id="pickBtn">사진 올리기</button>
+          <button class="btn" id="sampleBtn">예시 영상으로 보기</button>
+          <div class="slider"><label for="alpha">표시 진하기</label><input type="range" id="alpha" min="0" max="100" value="55"></div>
+          <button class="iconbtn" id="ovBtn" aria-pressed="true">표시 켜짐</button>
+        </div>
+        <div class="legend">
+          <span class="chip"><i class="dot good"></i>호전 — 이전보다 줄어든 곳</span>
+          <span class="chip"><i class="dot bad"></i>악화 — 이전보다 커진 곳</span>
+          <span class="chip"><i class="dot spread"></i>퍼짐 — 주변으로 번지는 곳</span>
+          <span class="chip"><i class="dot neutral"></i>신규·유지 — 비교 대상 없음</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" style="flex:1">
+        <div class="panel-hd"><h2>쉬운 말 설명</h2><span class="hint" id="scanLabel">아직 분석 전</span></div>
+        <div class="seg" role="tablist">
+          <button role="tab" id="tab-r" aria-selected="true" aria-controls="pane-r">판독 요약</button>
+          <button role="tab" id="tab-g" aria-selected="false" aria-controls="pane-g">용어 풀이</button>
+          <button role="tab" id="tab-q" aria-selected="false" aria-controls="pane-q">의사에게 할 질문</button>
+        </div>
+        <div class="tabpane" id="pane-r" role="tabpanel" aria-labelledby="tab-r">
+          <div class="verdict"><h3 id="vTitle">사진을 올리면 여기에 설명이 나옵니다</h3><span class="conf" id="vConf"></span></div>
+          <div class="report" id="report"></div>
+          <div class="findings" id="findings"></div>
+          <div id="probsWrap" hidden>
+            <div style="font-size:calc(12px * var(--fs)); color:var(--ink-3); margin:16px 0 8px; letter-spacing:.04em; text-transform:uppercase">참고용 유형 추정 (데모)</div>
+            <div class="probs" id="probs"></div>
+          </div>
+          <div class="check" id="checkBox" hidden>
+            <b>여기까지 이해되셨나요?</b>
+            <div class="row">
+              <button class="btn" id="okBtn">이해했어요</button>
+              <button class="btn" id="againBtn">더 쉽게 설명해 주세요</button>
+              <button class="btn" id="ttsBtn">🔊 읽어주기</button>
+            </div>
+            <div id="checkMsg" style="margin-top:9px; color:var(--ink-2)" hidden></div>
+            <p class="tiny">읽어주기는 브라우저의 음성 기능을 씁니다. 일부 브라우저는 <b>온라인 음성</b>을 사용해 문장을 음성 서버로 보낼 수 있으니, 민감한 내용은 기기에 설치된 오프라인 음성으로 설정한 뒤 사용하세요.</p>
+          </div>
+        </div>
+        <div class="tabpane" id="pane-g" role="tabpanel" aria-labelledby="tab-g" hidden>
+          <p style="margin:0 0 10px; color:var(--ink-2); font-size:calc(13px * var(--fs))">설명에 밑줄로 표시된 낱말을 누르면 이 목록에서 해당 항목이 강조됩니다.</p>
+          <dl class="glossary" id="glossary"></dl>
+        </div>
+        <div class="tabpane" id="pane-q" role="tabpanel" aria-labelledby="tab-q" hidden>
+          <p style="margin:0 0 12px; color:var(--ink-2); font-size:calc(13px * var(--fs))">이번 영상 내용에 맞춰 만든 질문입니다. 진료 전에 복사해 메모장에 붙여 두세요.</p>
+          <ol class="qlist" id="questions"><li>사진을 올리면 질문이 만들어집니다.</li></ol>
+          <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap">
+            <button class="btn" id="copyQ">질문 복사하기</button>
+            <button class="btn" id="ttsQ">🔊 질문 읽어주기</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel timeline">
+    <div class="panel-hd"><h2>검사 회차 기록</h2><span class="hint" id="tlHint"></span></div>
+    <div class="tl-scroll" id="tlScroll"></div>
+    <p class="empty-tl" id="tlEmpty">아직 저장된 회차가 없습니다. 분석 후 <b>이 회차 저장</b>을 누르면 다음 검사와 자동으로 비교해 호전·악화·퍼짐을 색으로 알려드립니다.</p>
+    <div class="tl-foot">
+      <button class="btn" id="saveScan" disabled>이 회차 저장</button>
+      <label>검사비 <input type="number" id="cost" placeholder="예: 480000" min="0" step="1000"></label>
+      <span id="costSum" class="mono">누적 —</span>
+      <button class="iconbtn" id="clearScans" style="margin-left:auto">기록 전체 삭제</button>
+    </div>
+  </section>
+
+  <footer>
+    <b>개인정보 처리</b> · 올린 사진은 메모리에서만 처리되고 저장되지 않습니다. 저장을 누른 회차만 축소본·좌표·수치 형태로 암호화되어 이 브라우저에 남습니다. 이메일은 해시값과 가려진 형태(<span class="mono">ab***@g***.com</span>)로만 보관하며, 원본은 암호문 안에만 있습니다.<br>
+    <b>암호화</b> · 계정마다 임의의 마스터 키를 만들고, 이를 비밀번호(PBKDF2-SHA256 210,000회)와 복구 키로 각각 봉인합니다. 비밀번호·복구 키 자체는 저장하지 않습니다.<br>
+    <b>판독 엔진</b> · 현재는 좌우 대칭 비교에 기반한 데모 휴리스틱입니다. 학습한 분류 모델(.h5 → TensorFlow.js)을 연결하면 같은 화면에서 실제 추론 결과로 바뀝니다.
+  </footer>
+</main>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   A. 인증 백엔드 어댑터
+   ───────────────────────────────────────────────────────────
+   demo   : 서버가 없으므로 인증번호를 화면에 표시합니다. (시연용)
+   server : 실제 메일 발송 서버를 붙일 자리. 아래 주석대로 구현하고
+            AuthBackend.use('server', 'https://api.example.com') 로 전환.
+            CSP 의 connect-src 에 그 주소를 추가해야 합니다.
+   ═══════════════════════════════════════════════════════════ */
+const AuthBackend = {
+  mode: 'demo',
+  base: '',
+  use(mode, base){ this.mode = mode; this.base = base || ''; },
+
+  /* 인증번호 발송. purpose: 'signup' | 'findid' | 'findpw' */
+  async sendCode(purpose, email){
+    if(this.mode === 'server'){
+      // const r = await fetch(this.base + '/auth/send-code', {
+      //   method:'POST', headers:{'Content-Type':'application/json'},
+      //   body: JSON.stringify({purpose, email})
+      // });
+      // if(!r.ok) throw new Error('메일 발송에 실패했습니다.');
+      // return { sent:true };                    // 코드는 서버만 알고 있음
+      throw new Error('서버 모드가 아직 연결되지 않았습니다.');
+    }
+    const code = makeCode(6);
+    DemoMail.put(purpose, email, code);
+    return { sent:true, demoCode: code };
+  },
+
+  /* 인증번호 확인 */
+  async verifyCode(purpose, email, code){
+    if(this.mode === 'server'){
+      // const r = await fetch(this.base + '/auth/verify-code', {...});
+      // return { ok: r.ok };
+      throw new Error('서버 모드가 아직 연결되지 않았습니다.');
+    }
+    return DemoMail.check(purpose, email, code);
+  }
+};
+
+/* 인증번호: 영문 대문자 + 숫자 6자리 (0/O/1/I/L 처럼 헷갈리는 글자는 제외) */
+const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
+function makeCode(n){
+  // 나머지 연산 편향을 없애기 위해 범위를 벗어난 값은 버리고 다시 뽑습니다
+  const out = [], max = 256 - (256 % CODE_ALPHA.length);
+  while(out.length < n){
+    for(const x of crypto.getRandomValues(new Uint8Array(n))){
+      if(x < max){ out.push(CODE_ALPHA[x % CODE_ALPHA.length]); if(out.length === n) break; }
+    }
+  }
+  return out.join('');
+}
+const normCode = s => String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+/* 데모용 인증번호 보관소 — 메모리에만 두고 새로고침하면 사라집니다 */
+const DemoMail = {
+  boxes: {},
+  put(purpose, email, code){
+    this.boxes[purpose] = { email, code, exp: Date.now() + 10*60*1000, tries: 0 };
+  },
+  check(purpose, email, code){
+    const b = this.boxes[purpose];
+    if(!b || b.email !== email) return {ok:false, reason:'요청 정보가 없습니다. 인증번호를 다시 받아 주세요.'};
+    if(Date.now() > b.exp)  return {ok:false, reason:'인증번호가 만료되었습니다. 다시 받아 주세요.'};
+    if(b.tries >= 5)        return {ok:false, reason:'입력 횟수를 초과했습니다. 인증번호를 다시 받아 주세요.'};
+    b.tries++;
+    if(b.code !== code)     return {ok:false, reason:`인증번호가 맞지 않습니다. (${5-b.tries}회 남음)`};
+    delete this.boxes[purpose];
+    return {ok:true};
+  },
+  expAt(purpose){ const b = this.boxes[purpose]; return b ? b.exp : 0; }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   B. 저장소 · 암호화
+   구조: 계정마다 임의 마스터키 → 비밀번호 / 복구 키로 각각 봉인
+        데이터(이메일 원본·이름·회차)는 마스터키로 암호화
+   ═══════════════════════════════════════════════════════════ */
+const AKEY = 'mri-accounts-v3';
+const OLD2 = 'mri-vault-v2';
+const OLD1 = 'mri-reader-v1';
+const LKEY = 'mri-attempts-v1';
+const ITER = 210000;
+const EMAIL_PEPPER = 'mri-reader/email/v3';
+const SUBTLE = (typeof crypto !== 'undefined' && crypto.subtle) ? crypto.subtle : null;
+
+const b64 = {
+  enc(buf){ const a = new Uint8Array(buf); let s=''; for(let i=0;i<a.length;i+=0x8000) s += String.fromCharCode.apply(null, a.subarray(i,i+0x8000)); return btoa(s); },
+  dec(str){ return Uint8Array.from(atob(str), c=>c.charCodeAt(0)); }
+};
+const ls = {
+  get(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+async function sha256hex(s){
+  const d = await SUBTLE.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function kdf(secret, salt, iter){
+  const base = await SUBTLE.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey']);
+  return SUBTLE.deriveKey({name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function seal(key, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await SUBTLE.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return {iv:b64.enc(iv), ct:b64.enc(ct)};
+}
+async function unseal(key, box){
+  const pt = await SUBTLE.decrypt({name:'AES-GCM', iv:b64.dec(box.iv)}, key, b64.dec(box.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+const importMaster = raw => SUBTLE.importKey('raw', raw, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
+
+const REC_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';    // 헷갈리는 0/O/1/I/L 제외
+function makeRecoveryKey(){
+  const r = crypto.getRandomValues(new Uint8Array(20));
+  const s = [...r].map(x=>REC_ALPHA[x % REC_ALPHA.length]).join('');
+  return 'MRI-' + s.match(/.{4}/g).join('-');
+}
+const normRec = s => s.toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+const accounts = {
+  all(){ return ls.get(AKEY) || {}; },
+  save(a){ return ls.set(AKEY, a); },
+  byId(id){ return this.all()[String(id||'').toLowerCase()] || null; },
+  async byEmail(email){
+    const h = await sha256hex(EMAIL_PEPPER + String(email||'').trim().toLowerCase());
+    return Object.values(this.all()).find(a => a.emailHash === h) || null;
+  },
+  put(acc){ const a = this.all(); a[acc.id.toLowerCase()] = acc; return this.save(a); },
+  remove(id){ const a = this.all(); delete a[String(id).toLowerCase()]; return this.save(a); }
+};
+
+function maskEmail(e){
+  const [l, d] = String(e).split('@');
+  if(!d) return '***';
+  const ml = l.length <= 2 ? l[0] + '*' : l.slice(0,2) + '*'.repeat(Math.max(1, l.length-2));
+  const parts = d.split('.');
+  return `${ml}@${parts[0][0]}${'*'.repeat(Math.max(1, parts[0].length-1))}.${parts.slice(1).join('.')}`;
+}
+function maskId(id){
+  return id.length <= 3 ? id[0] + '**' : id.slice(0,2) + '*'.repeat(id.length-3) + id.slice(-1);
+}
+
+/* 계정 생성 */
+async function createAccount({id, email, pw, scans}){
+  const master = crypto.getRandomValues(new Uint8Array(32));
+  const mKey = await importMaster(master);
+  const pwSalt = crypto.getRandomValues(new Uint8Array(16));
+  const recSalt = crypto.getRandomValues(new Uint8Array(16));
+  const rec = makeRecoveryKey();
+  const acc = {
+    v: 3,
+    id,
+    emailHash: await sha256hex(EMAIL_PEPPER + email.toLowerCase()),
+    emailMask: maskEmail(email),
+    created: new Date().toISOString(),
+    pwSalt: b64.enc(pwSalt), recSalt: b64.enc(recSalt), iter: ITER,
+    wrapPw:  await seal(await kdf(pw, pwSalt, ITER), {m: b64.enc(master)}),
+    wrapRec: await seal(await kdf(normRec(rec), recSalt, ITER), {m: b64.enc(master)}),
+    data:    await seal(mKey, {email, scans: scans || []})
+  };
+  if(!accounts.put(acc)) throw new Error('브라우저 저장 공간이 부족합니다.');
+  return {acc, rec};
+}
+async function unlockWithPw(acc, pw){
+  const kek = await kdf(pw, b64.dec(acc.pwSalt), acc.iter || ITER);
+  const {m} = await unseal(kek, acc.wrapPw);          // 틀리면 예외
+  return { raw: b64.dec(m), key: await importMaster(b64.dec(m)) };
+}
+async function unlockWithRec(acc, rec){
+  const kek = await kdf(normRec(rec), b64.dec(acc.recSalt), acc.iter || ITER);
+  const {m} = await unseal(kek, acc.wrapRec);
+  return { raw: b64.dec(m), key: await importMaster(b64.dec(m)) };
+}
+async function rewrapPassword(acc, masterRaw, newPw){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  acc.pwSalt = b64.enc(salt);
+  acc.wrapPw = await seal(await kdf(newPw, salt, ITER), {m: b64.enc(masterRaw)});
+  acc.iter = ITER;
+  return acc;
+}
+async function rewrapRecovery(acc, masterRaw){
+  const rec = makeRecoveryKey();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  acc.recSalt = b64.enc(salt);
+  acc.wrapRec = await seal(await kdf(normRec(rec), salt, ITER), {m: b64.enc(masterRaw)});
+  return rec;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   C. 판독 엔진 ─ 모델 연결 지점
+   학습한 모델을 붙일 때는 ENGINE.analyze 만 교체하면 됩니다.
+   ═══════════════════════════════════════════════════════════ */
+const CLASSES = [
+  {key:'glioma',     ko:'신경교종',        hint:'뇌 조직 자체에서 생기는 종양'},
+  {key:'meningioma', ko:'수막종',          hint:'뇌를 감싼 막에서 생기는 종양'},
+  {key:'pituitary',  ko:'뇌하수체 종양',   hint:'뇌 아래쪽 호르몬 기관의 종양'},
+  {key:'no_tumor',   ko:'뚜렷한 종양 없음', hint:'이 영상에서는 종양 소견이 두드러지지 않음'}
+];
+const ENGINE = { name:'데모 휴리스틱 v0.1', analyze: heuristicAnalyze };
+
+const N = 128;
+function toGray(canvas){
+  const off = document.createElement('canvas'); off.width = off.height = N;
+  const c = off.getContext('2d', {willReadFrequently:true});
+  c.fillStyle = '#000'; c.fillRect(0,0,N,N);
+  c.drawImage(canvas, 0,0, N,N);
+  const d = c.getImageData(0,0,N,N).data, g = new Float32Array(N*N);
+  for(let i=0;i<N*N;i++) g[i] = 0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2];
+  return g;
+}
+function blur(src){
+  const out = new Float32Array(N*N);
+  for(let y=1;y<N-1;y++) for(let x=1;x<N-1;x++){
+    let s=0; for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++) s += src[(y+j)*N + x+i];
+    out[y*N+x] = s/9;
+  }
+  return out;
+}
+function lobeName(nx, ny){
+  const side = nx < .5 ? '우측' : '좌측';
+  const dx = Math.abs(nx-.5);
+  let part;
+  if(dx < .13 && ny > .34 && ny < .68)       part = '뇌실 주변 백질';
+  else if(dx < .22 && ny >= .40 && ny < .60) part = '기저핵 부근';
+  else if(ny < .34)                          part = '전두엽';
+  else if(ny > .72)                          part = '후두엽';
+  else if(dx > .30)                          part = '측두엽';
+  else                                       part = '두정엽';
+  return {side, part, full:`${side} ${part}`};
+}
+function heuristicRegions(canvas){
+  const g = blur(blur(toGray(canvas)));
+  let mean = 0; for(let i=0;i<g.length;i++) mean += g[i]; mean /= g.length;
+  const thr = Math.max(18, mean*0.62);
+  const diff = new Float32Array(N*N);
+  for(let y=0;y<N;y++) for(let x=0;x<N;x++){
+    const a = g[y*N+x], b = g[y*N + (N-1-x)];
+    diff[y*N+x] = (a>thr || b>thr) ? Math.max(0, a-b) : 0;
+  }
+  const dm = blur(diff);
+  const peaks = [];
+  for(let y=6;y<N-6;y++) for(let x=6;x<N-6;x++){
+    const v = dm[y*N+x]; if(v < 14) continue;
+    let top = true;
+    for(let j=-4;j<=4 && top;j++) for(let i=-4;i<=4;i++)
+      if(dm[(y+j)*N + x+i] > v){ top=false; break; }
+    if(top) peaks.push({x,y,v});
+  }
+  peaks.sort((a,b)=>b.v-a.v);
+  const picked = [];
+  for(const p of peaks){
+    if(picked.some(q => Math.hypot(q.x-p.x, q.y-p.y) < 18)) continue;
+    picked.push(p); if(picked.length===3) break;
+  }
+  return picked.map(p=>{
+    let area = 0;
+    for(let j=-16;j<=16;j++) for(let i=-16;i<=16;i++){
+      const yy=p.y+j, xx=p.x+i; if(yy<0||yy>=N||xx<0||xx>=N) continue;
+      if(dm[yy*N+xx] > p.v*0.45) area++;
+    }
+    const nx = p.x/N, ny = p.y/N, lb = lobeName(nx,ny);
+    return { nx, ny, r: Math.min(.22, Math.max(.045, Math.sqrt(area/Math.PI)/N * 1.35)),
+             area, score:p.v, conf: Math.min(.97, p.v/58), side:lb.side, part:lb.part, name:lb.full };
+  });
+}
+function heuristicAnalyze(canvas){
+  const regions = heuristicRegions(canvas);
+  const g = toGray(canvas);
+  let mean=0, min=255, max=0;
+  for(let i=0;i<g.length;i++){ mean+=g[i]; if(g[i]<min)min=g[i]; if(g[i]>max)max=g[i]; }
+  mean/=g.length;
+  const quality = (max-min) < 70 ? '낮음 (대비 부족)' : mean < 14 ? '낮음 (너무 어두움)' : '양호';
+  const s = {glioma:.35, meningioma:.30, pituitary:.20, no_tumor:1.2};
+  if(regions.length){
+    const t = regions[0];
+    const dx = Math.abs(t.nx-.5), dy = t.ny-.5, edge = Math.hypot(dx,dy);
+    s.no_tumor   = Math.max(.05, 1.2 - t.conf*1.6);
+    s.glioma    += t.conf * (edge < .30 ? 1.5 : .5);
+    s.meningioma+= t.conf * (edge > .30 ? 1.4 : .4);
+    s.pituitary += t.conf * (dx < .09 && t.ny > .46 && t.ny < .68 ? 1.6 : .15);
+  }
+  const tot = Object.values(s).reduce((a,b)=>a+b,0);
+  return {probs: CLASSES.map(c => s[c.key]/tot), regions, quality};
+}
+
+/* ═══════════════════════════════════════════════════════════
+   D. 상태
+   ═══════════════════════════════════════════════════════════ */
+const S = {
+  img:null, src:null, analysis:null, regions:[], compared:false,
+  overlay:true, alpha:.55, scans:[], simple:false,
+  acc:null, masterRaw:null, masterKey:null, email:'', guest:false
+};
+const flow = { purpose:null, id:'', email:'', pw:'', acc:null };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ═══════════════════════════════════════════════════════════
+   E. 예시 영상 (합성 — 실제 환자 영상 아님)
+   ═══════════════════════════════════════════════════════════ */
+function makeSample(seed){
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0,0,512,512);
+  const cx=256, cy=256;
+  x.save(); x.translate(cx,cy); x.scale(1,1.18);
+  x.beginPath(); x.arc(0,0,196,0,7); x.fillStyle='#3a3f45'; x.fill();
+  x.beginPath(); x.arc(0,0,182,0,7); x.fillStyle='#0b0d10'; x.fill();
+  const gr = x.createRadialGradient(0,-20,40, 0,0,180);
+  gr.addColorStop(0,'#9aa3ac'); gr.addColorStop(.72,'#767f88'); gr.addColorStop(1,'#565f68');
+  x.beginPath(); x.arc(0,0,176,0,7); x.fillStyle=gr; x.fill();
+  x.restore();
+  x.fillStyle = '#12161a';
+  [[-26,-6],[26,-6]].forEach(([ox,oy])=>{
+    x.save(); x.translate(cx+ox, cy+oy); x.rotate(ox<0?-.34:.34);
+    x.beginPath(); x.ellipse(0,0,15,52,0,0,7); x.fill(); x.restore();
+  });
+  let r = seed || 7;
+  const rnd = ()=> (r = (r*1103515245 + 12345) % 2147483648) / 2147483648;
+  for(let i=0;i<2600;i++){
+    const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*172;
+    const px = cx + Math.cos(a)*d, py = cy + Math.sin(a)*d*1.12;
+    x.fillStyle = `rgba(${200+rnd()*40|0},${205+rnd()*40|0},${210+rnd()*40|0},${.03+rnd()*.07})`;
+    x.beginPath(); x.arc(px,py, 1+rnd()*5, 0,7); x.fill();
+  }
+  const lx = cx+72, ly = cy-34;
+  const lg = x.createRadialGradient(lx,ly,2, lx,ly,44);
+  lg.addColorStop(0,'rgba(240,244,248,.95)'); lg.addColorStop(.45,'rgba(205,212,220,.6)');
+  lg.addColorStop(1,'rgba(150,158,168,0)');
+  x.beginPath(); x.arc(lx,ly,44,0,7); x.fillStyle=lg; x.fill();
+  return c;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   F. 렌더링
+   ═══════════════════════════════════════════════════════════ */
+const cv = $('cv'), ctx = cv.getContext('2d');
+const COLORVAR = {good:'--good', bad:'--bad', spread:'--spread', neutral:'--neutral'};
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function draw(){
+  const W = cv.width, H = cv.height;
+  ctx.fillStyle = cssVar('--film'); ctx.fillRect(0,0,W,H);
+  if(!S.img) return;
+  const s = Math.min(W/S.img.width, H/S.img.height);
+  const w = S.img.width*s, h = S.img.height*s;
+  ctx.drawImage(S.img, (W-w)/2, (H-h)/2, w, h);
+  if(!S.overlay) return;
+  const cvd = document.documentElement.getAttribute('data-cvd') === 'on';
+  S.regions.forEach((rg, i) => {
+    const px = (W-w)/2 + rg.nx*w, py = (H-h)/2 + rg.ny*h, rr = rg.r*Math.min(w,h);
+    const col = cssVar(COLORVAR[rg.status || 'neutral']);
+    const grd = ctx.createRadialGradient(px,py,rr*.15, px,py,rr*1.5);
+    grd.addColorStop(0, col + Math.round(S.alpha*150).toString(16).padStart(2,'0'));
+    grd.addColorStop(1, col + '00');
+    ctx.beginPath(); ctx.arc(px,py,rr*1.5,0,7); ctx.fillStyle = grd; ctx.fill();
+    ctx.save();
+    ctx.setLineDash(!cvd ? [] : rg.status==='bad' ? [] : rg.status==='spread' ? [10,7] : [2,6]);
+    ctx.lineWidth = Math.max(2, W/300); ctx.strokeStyle = col;
+    ctx.beginPath(); ctx.arc(px,py,rr,0,7); ctx.stroke(); ctx.restore();
+    const label = `${i+1}. ${rg.name}`;
+    ctx.font = `600 ${Math.round(W/38)}px ${cssVar('--f-ui')}`;
+    const tw = ctx.measureText(label).width, ty = py - rr - W/34;
+    ctx.fillStyle = 'rgba(8,11,14,.78)';
+    ctx.fillRect(px - tw/2 - 8, ty - W/44, tw + 16, W/28);
+    ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, px, ty + W/180);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   G. 용어 사전
+   ═══════════════════════════════════════════════════════════ */
+const GLOSSARY = [
+  ['병변','lesion','정상 조직과 달라 보이는 부분을 통틀어 부르는 말입니다. 병 이름이 아니라 "여기가 다르게 보인다"는 표시에 가깝습니다.'],
+  ['고신호','high signal / hyperintense','MRI에서 주변보다 하얗게 보이는 것. 물기(부종)나 조직 변화가 있을 때 흔히 이렇게 보입니다.'],
+  ['저신호','low signal / hypointense','주변보다 어둡게 보이는 것. 촬영 방식에 따라 같은 조직도 밝게 또는 어둡게 나옵니다.'],
+  ['좌우 비대칭','asymmetry','뇌는 좌우가 거의 대칭입니다. 한쪽에만 보이는 변화는 우연이 아닐 가능성이 커서 먼저 살펴봅니다.'],
+  ['부종','edema','조직에 물이 차서 부은 상태. 병변 주위가 넓게 하얗게 보이는 원인이 됩니다.'],
+  ['백질','white matter','뇌 속 신경 다발이 지나는 안쪽 부분. 나이가 들면 작은 점 모양 변화가 흔히 생깁니다.'],
+  ['뇌실','ventricle','뇌 가운데의 물(뇌척수액)이 들어 있는 빈 공간. 영상에서 나비 모양으로 어둡게 보입니다.'],
+  ['축상면','axial','머리를 수평으로 자른 단면. 이 사이트의 부위 이름은 축상면 기준입니다.'],
+  ['정중선 이동','midline shift','좌우 가운데 선이 한쪽으로 밀린 상태. 압력이 높아졌다는 신호일 수 있어 중요하게 봅니다.'],
+  ['신경교종','glioma','뇌 조직 자체의 세포에서 생기는 종양입니다.'],
+  ['수막종','meningioma','뇌를 감싸는 막에서 생기는 종양으로, 대개 뇌 바깥쪽 가장자리에 붙어 있습니다.'],
+  ['뇌하수체 종양','pituitary tumor','뇌 아래 가운데 호르몬을 만드는 작은 기관에 생기는 종양입니다.'],
+  ['경색','infarction','혈관이 막혀 뇌 조직이 손상된 상태. 뇌졸중의 한 종류입니다.'],
+  ['조영증강','contrast enhancement','조영제를 맞고 찍었을 때 밝아지는 현상. 혈관이 많은 조직에서 잘 나타납니다.']
+];
+function renderGlossary(hit){
+  $('glossary').innerHTML = GLOSSARY.map(([ko,en,ds])=>
+    `<div class="gitem${hit===ko?' hit':''}" id="g-${esc(ko)}"><dt>${esc(ko)}<span class="en">${esc(en)}</span></dt><dd>${esc(ds)}</dd></div>`
+  ).join('');
+}
+function linkTerms(text){
+  let out = text;
+  GLOSSARY.forEach(([ko]) => {
+    out = out.replace(new RegExp(ko+'(?![^<]*>)','g'), `<button class="term" data-term="${ko}">${ko}</button>`);
+  });
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   H. 회차 비교 · 설명문 · 질문
+   ═══════════════════════════════════════════════════════════ */
+function compareWithPrev(regions){
+  const prev = S.scans[S.scans.length-1];
+  if(!prev || !prev.regions || !prev.regions.length){
+    regions.forEach(r => { r.status='neutral'; r.change='첫 기록 — 비교 대상 없음'; });
+    return false;
+  }
+  regions.forEach(r=>{
+    let best=null, bd=1;
+    prev.regions.forEach(p=>{ const d = Math.hypot(p.nx-r.nx, p.ny-r.ny); if(d < bd){ bd=d; best=p; } });
+    if(!best || bd > .20){ r.status='spread'; r.change='이전에 없던 위치에 새로 보임'; return; }
+    const ratio = r.area / Math.max(1, best.area);
+    if(bd > .08 && ratio > .9){ r.status='spread'; r.change='이전 위치에서 옮겨가며 번지는 모양'; }
+    else if(ratio < .85)      { r.status='good';   r.change=`이전보다 약 ${Math.round((1-ratio)*100)}% 작아짐`; }
+    else if(ratio > 1.15)     { r.status='bad';    r.change=`이전보다 약 ${Math.round((ratio-1)*100)}% 커짐`; }
+    else                      { r.status='neutral';r.change='이전과 비슷한 크기'; }
+  });
+  return true;
+}
+const STATUS_KO = {good:'호전', bad:'악화', spread:'퍼짐', neutral:'신규·유지'};
+function buildReport(a, regions, compared, simple){
+  const n = regions.length, nth = S.scans.length + 1;
+  if(!n){
+    return simple
+      ? ['이번 사진에서는 한쪽에만 유난히 하얗게 보이는 곳이 없었습니다.',
+         '그래도 이 도구는 사진 한 장만 보고 판단합니다. 증상이 있다면 꼭 병원에서 확인하세요.']
+      : [`이번 ${nth}차 영상에서는 좌우를 맞대어 비교했을 때 한쪽에만 두드러지는 고신호 병변이 확인되지 않았습니다.`,
+         '다만 이 도구는 축상면 한 장의 좌우 비대칭만 봅니다. 작은 변화, 다른 단면에서만 보이는 변화, 조영증강이 필요한 변화는 놓칠 수 있습니다.'];
+  }
+  const t = regions[0], rest = regions.slice(1), lines = [];
+  if(simple){
+    lines.push(`사진에서 눈에 띄는 곳은 ${n}군데입니다. 가장 뚜렷한 곳은 <b>${t.name}</b>이고, 반대쪽 같은 자리보다 하얗게 보입니다.`);
+    lines.push('뇌는 원래 왼쪽과 오른쪽 모양이 거의 같습니다. 한쪽만 다르게 보이면 그 자리를 먼저 확인합니다.');
+    if(compared) lines.push(`지난번 사진과 견주면 ${regions.map(r=>`${r.name}은(는) ${STATUS_KO[r.status]}`).join(', ')} 상태입니다. 파랑이 좋아짐, 빨강이 나빠짐, 노랑이 번짐입니다.`);
+    lines.push('이 결과는 <b>진단이 아닙니다.</b> 질문 목록을 챙겨 담당 의사에게 그대로 물어보세요.');
+    return lines;
+  }
+  lines.push(`이번 ${nth}차 영상에서 좌우 비대칭이 뚜렷한 지점 ${n}곳을 찾았습니다. 가장 두드러진 곳은 <b>${t.name}</b>으로, 반대편 같은 위치에 견주어 고신호로 보입니다. (신뢰도 ${(t.conf*100).toFixed(0)}%)`);
+  if(rest.length) lines.push(`그 밖에 ${rest.map(r=>`<b>${r.name}</b>`).join(', ')}에서도 같은 방향의 신호 차이가 관찰됩니다. 크기가 작을수록 촬영 각도나 잡음일 가능성도 함께 고려해야 합니다.`);
+  lines.push('부위 이름은 축상면 기준이며, 영상의 왼쪽이 환자의 오른쪽입니다(방사선과 표기 관례). 병변 주변이 넓게 밝다면 부종이 함께 있을 수 있습니다.');
+  if(compared) lines.push(`직전 회차와 맞대어 본 결과: ${regions.map(r=>`<b>${r.name}</b> — ${STATUS_KO[r.status]}(${r.change})`).join(' · ')}.`);
+  else lines.push('아직 비교할 이전 회차가 없어 색은 회색(신규)으로 표시했습니다. 이번 회차를 저장해 두면 다음 검사 때 자동으로 호전·악화·퍼짐을 색으로 알려드립니다.');
+  lines.push('이 결과는 진단이 아니라 <b>질문을 준비하기 위한 정리</b>입니다. 확진에는 여러 단면과 촬영 기법, 필요하면 조영증강 영상과 임상 진찰이 함께 필요합니다.');
+  return lines;
+}
+function buildQuestions(a, regions, compared){
+  const q = [];
+  if(regions.length){
+    q.push(`제 영상에서 ${regions[0].name}에 보이는 부분이 무엇인가요? 병변인가요, 정상 변이인가요?`);
+    q.push('그 부분의 크기는 얼마나 되고, 위치가 기능(말하기·움직임·시야)에 영향을 주는 자리인가요?');
+    if(regions.length>1) q.push(`다른 ${regions.length-1}곳도 같은 성격인가요, 서로 관련이 없는 것인가요?`);
+    q.push('지금 증상과 이 영상 소견이 서로 맞아떨어지나요?');
+  } else {
+    q.push('영상에서는 특별한 소견이 없다고 들었는데, 제 증상은 어떻게 설명할 수 있나요?');
+    q.push('다른 단면이나 조영증강 촬영이 추가로 필요할까요?');
+  }
+  if(compared) q.push('지난 검사와 비교해 좋아진 건가요, 나빠진 건가요? 판단 기준이 무엇인가요?');
+  q.push('다음 MRI는 언제 찍어야 하나요? 그 사이에 바로 병원에 와야 하는 증상은 무엇인가요?');
+  q.push('지금 단계에서 치료를 시작해야 하나요, 경과를 지켜봐도 되나요? 각각의 장단점이 궁금합니다.');
+  q.push('판독 결과지 사본과 영상 파일(CD·DVD)을 받을 수 있을까요?');
+  return q;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   I. 화면 갱신
+   ═══════════════════════════════════════════════════════════ */
+function renderAll(){
+  const a = S.analysis; if(!a) return;
+  const R = S.regions;
+  $('vTitle').textContent = R.length
+    ? `눈여겨볼 곳 ${R.length}군데 — 가장 뚜렷한 곳은 ${R[0].name}`
+    : '한쪽에만 두드러지는 부분은 찾지 못했습니다';
+  $('vConf').textContent = R.length ? `최고 신뢰도 ${(R[0].conf*100).toFixed(0)}% · ${ENGINE.name}` : ENGINE.name;
+  $('report').innerHTML = buildReport(a, R, S.compared, S.simple).map(p=>`<p>${linkTerms(p)}</p>`).join('');
+  $('findings').innerHTML = R.map((r,i)=>`
+    <div class="finding">
+      <i class="bar" style="background:var(${COLORVAR[r.status]})"></i>
+      <div><div class="nm">${i+1}. ${esc(r.name)}</div><div class="ds">${esc(r.change)} · 신뢰도 ${(r.conf*100).toFixed(0)}%</div></div>
+      <span class="tag t-${r.status}">${STATUS_KO[r.status]}</span>
+    </div>`).join('');
+  $('probsWrap').hidden = false;
+  const order = CLASSES.map((c,i)=>({...c, p:a.probs[i]})).sort((x,y)=>y.p-x.p);
+  $('probs').innerHTML = order.map(c=>`
+    <div class="prob">
+      <span title="${esc(c.hint)}">${c.ko}</span>
+      <span class="track"><span class="fill" style="width:${(c.p*100).toFixed(1)}%"></span></span>
+      <span class="pct mono">${(c.p*100).toFixed(0)}%</span>
+    </div>`).join('');
+  $('questions').innerHTML = buildQuestions(a, R, S.compared).map(q=>`<li>${esc(q)}</li>`).join('');
+  $('checkBox').hidden = false;
+  $('saveScan').disabled = S.guest;
+  $('scanLabel').textContent = `${S.scans.length+1}차 분석 · ${new Date().toLocaleDateString('ko-KR')}`;
+  $('fbQuality').textContent = `품질 ${a.quality}`;
+  renderGlossary();
+  draw();
+}
+function renderTimeline(){
+  $('tlScroll').innerHTML = S.scans.map((s,i)=>`
+    <button class="tlcard" data-i="${i}">
+      <img src="${s.thumb}" alt="${i+1}차 영상 축소본">
+      <span class="meta">
+        <span class="nth">${i+1}차 · ${s.regions.length}곳</span>
+        <span class="dt">${esc(s.date)}</span>
+        <span style="display:flex; gap:4px; margin-top:3px">${
+          s.regions.length ? s.regions.map(r=>`<i class="dot ${r.status}"></i>`).join('') : '<i class="dot neutral"></i>'
+        }</span>
+      </span>
+    </button>`).join('');
+  $('tlEmpty').hidden = S.scans.length > 0;
+  const sum = S.scans.reduce((a,s)=>a + (s.cost||0), 0);
+  $('costSum').textContent = sum ? `누적 ${sum.toLocaleString('ko-KR')}원 · ${S.scans.length}회` : '누적 —';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   J. 이미지 처리
+   ═══════════════════════════════════════════════════════════ */
+function loadCanvas(canvas, seriesLabel){
+  const img = new Image();
+  img.onload = () => {
+    S.img = img; S.src = canvas;
+    $('emptyState').hidden = true; $('orient').hidden = false;
+    $('fbSeries').textContent = seriesLabel;
+    $('fbSize').textContent = `${img.width} × ${img.height}`;
+    $('fbTime').textContent = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    runAnalysis();
+  };
+  img.src = canvas.toDataURL('image/png');
+}
+function loadFile(file){
+  if(!file || !file.type.startsWith('image/')) return;
+  if(file.size > 25*1024*1024){ alert('25MB 이하 이미지만 열 수 있습니다.'); return; }
+  const fr = new FileReader();
+  fr.onload = e => {
+    const im = new Image();
+    im.onerror = () => alert('이미지를 읽을 수 없습니다. JPG 또는 PNG 파일인지 확인해 주세요.');
+    im.onload = () => {
+      const c = document.createElement('canvas');
+      const m = Math.min(1, 900/Math.max(im.width, im.height));
+      c.width = Math.round(im.width*m); c.height = Math.round(im.height*m);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      loadCanvas(c, 'SERIES 업로드 영상');   // 파일명은 환자 식별정보일 수 있어 표시하지 않음
+    };
+    im.src = e.target.result;
+  };
+  fr.readAsDataURL(file);
+}
+function runAnalysis(){
+  const a = ENGINE.analyze(S.src);
+  S.analysis = a; S.regions = a.regions;
+  S.compared = compareWithPrev(S.regions);
+  S.simple = false;
+  $('checkMsg').hidden = true;
+  renderAll();
+}
+function thumbOf(canvas, size){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'); x.fillStyle='#0A0D10'; x.fillRect(0,0,size,size);
+  const s = Math.min(size/canvas.width, size/canvas.height);
+  x.drawImage(canvas, (size-canvas.width*s)/2, (size-canvas.height*s)/2, canvas.width*s, canvas.height*s);
+  return c.toDataURL('image/jpeg', .72);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   K. 인증 화면 제어
+   ═══════════════════════════════════════════════════════════ */
+const SCREENS = ['login','signup','recovery','findid','idresult','findpw','newpw','chpw'];
+function show(screen){
+  SCREENS.forEach(s => { const el = $('scr-'+s); if(el) el.hidden = (s !== screen); });
+  $('gate').hidden = false; $('app').hidden = true;
+  SCREENS.forEach(s => { const e = $('err-'+s); if(e) e.hidden = true; });
+  $('ok-login').hidden = true;
+  const first = $('scr-'+screen).querySelector('input');
+  if(first) setTimeout(()=>first.focus(), 40);
+}
+function fail(screen, msg){ const e = $('err-'+screen); if(e){ e.textContent = msg; e.hidden = false; } }
+function pwScore(p){
+  let s = 0;
+  if(p.length >= 8) s++; if(p.length >= 12) s++;
+  if(/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
+  if(/\d/.test(p)) s++; if(/[^\w\s]/.test(p)) s++;
+  return Math.min(4, s);
+}
+function bindMeter(input, bar){
+  $(input).addEventListener('input', e=>{
+    const s = pwScore(e.target.value);
+    $(bar).style.width = (s/4*100)+'%';
+    $(bar).style.background = s<2 ? 'var(--bad)' : s<3 ? 'var(--spread)' : 'var(--good)';
+  });
+}
+bindMeter('suPw','suPwBar'); bindMeter('npPw','npPwBar'); bindMeter('cpNew','cpBar');
+
+const ID_RE = /^[A-Za-z0-9_]{4,20}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+
+$('suId').addEventListener('input', e=>{
+  const v = e.target.value.trim(), h = $('suIdHelp');
+  if(!v){ h.textContent='로그인에 사용합니다.'; h.className='help'; return; }
+  if(!ID_RE.test(v)){ h.textContent='영문·숫자·밑줄 4~20자만 쓸 수 있습니다.'; h.className='help no'; return; }
+  if(accounts.byId(v)){ h.textContent='이미 사용 중인 아이디입니다.'; h.className='help no'; return; }
+  h.textContent='사용할 수 있는 아이디입니다.'; h.className='help ok';
+});
+$('suPw2').addEventListener('input', e=>{
+  const h = $('suPw2Help');
+  if(!e.target.value){ h.textContent=''; h.className='help'; return; }
+  const same = e.target.value === $('suPw').value;
+  h.textContent = same ? '일치합니다.' : '아직 일치하지 않습니다.';
+  h.className = 'help ' + (same ? 'ok' : 'no');
+});
+
+/* ── 이메일 인증 (입력 화면에 바로 붙는 공용 부품) ────────────
+   send  : 인증번호 요청 → 입력칸·타이머 표시
+   check : 입력한 번호 확인 → 성공 시 onVerified 호출
+   이메일을 고치면 인증 상태가 자동으로 풀립니다.
+   ─────────────────────────────────────────────────────────── */
+function makeVerifier(cfg){
+  const st = {sent:false, verified:false, email:'', resendAt:0, tid:null};
+  const stop = () => { clearInterval(st.tid); st.tid = null; };
+
+  function reset(){
+    stop();
+    st.sent = st.verified = false; st.email = '';
+    $(cfg.box).hidden = true; $(cfg.ok).hidden = true;
+    $(cfg.input).value = ''; $(cfg.input).disabled = false;
+    $(cfg.check).disabled = false;
+    $(cfg.send).disabled = false; $(cfg.send).textContent = '인증번호 받기';
+    if(cfg.onReset) cfg.onReset();
+  }
+  function tick(){
+    if(st.verified) return stop();
+    const rleft = Math.max(0, st.resendAt - Date.now());
+    if(AuthBackend.mode === 'demo'){
+      const left = Math.max(0, DemoMail.expAt(cfg.purpose) - Date.now());
+      $(cfg.timer).textContent = left
+        ? `남은 시간 ${Math.floor(left/60000)}:${String(Math.floor(left%60000/1000)).padStart(2,'0')}`
+        : '인증번호가 만료되었습니다. 다시 받아 주세요.';
+    } else {
+      $(cfg.timer).textContent = '10분 안에 입력해 주세요.';
+    }
+    $(cfg.send).disabled = rleft > 0;
+    $(cfg.send).textContent = rleft > 0 ? `재발송 ${Math.ceil(rleft/1000)}초` : '재발송';
+  }
+  async function send(){
+    const email = cfg.getEmail();
+    const bad = await cfg.validate(email);
+    if(bad) return fail(cfg.screen, bad);
+    $(cfg.send).disabled = true; $(cfg.send).textContent = '보내는 중…';
+    try{
+      const r = await AuthBackend.sendCode(cfg.purpose, email);
+      st.sent = true; st.verified = false; st.email = email;
+      $(cfg.box).hidden = false; $(cfg.ok).hidden = true;
+      $(cfg.demo).hidden = AuthBackend.mode !== 'demo';
+      $(cfg.demoCode).textContent = r.demoCode || '';
+      $(cfg.input).value = ''; $(cfg.input).disabled = false; $(cfg.check).disabled = false;
+      $('err-'+cfg.screen).hidden = true;
+      st.resendAt = Date.now() + 60*1000;
+      stop(); st.tid = setInterval(tick, 500); tick();
+      setTimeout(()=>$(cfg.input).focus(), 30);
+    }catch(e){
+      fail(cfg.screen, e.message);
+      $(cfg.send).disabled = false; $(cfg.send).textContent = '인증번호 받기';
+    }
+  }
+  async function check(){
+    const code = normCode($(cfg.input).value);
+    if(!st.sent) return fail(cfg.screen, '먼저 인증번호를 받아 주세요.');
+    if(!CODE_RE.test(code)) return fail(cfg.screen, '인증번호 6자리(영문·숫자)를 정확히 입력해 주세요.');
+    $(cfg.check).disabled = true;
+    try{
+      const r = await AuthBackend.verifyCode(cfg.purpose, st.email, code);
+      if(!r.ok){ $(cfg.check).disabled = false; return fail(cfg.screen, r.reason || '인증에 실패했습니다.'); }
+      st.verified = true; stop();
+      $(cfg.box).hidden = true; $(cfg.ok).hidden = false;
+      $(cfg.send).disabled = true; $(cfg.send).textContent = '인증 완료';
+      $('err-'+cfg.screen).hidden = true;
+      if(cfg.onVerified) cfg.onVerified(st.email);
+    }catch(e){ $(cfg.check).disabled = false; fail(cfg.screen, e.message); }
+  }
+  $(cfg.send).onclick = send;
+  $(cfg.check).onclick = check;
+  $(cfg.input).addEventListener('input', e => {
+    e.target.value = normCode(e.target.value).slice(0,6);
+  });
+  $(cfg.input).addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); check(); } });
+  $(cfg.emailInput).addEventListener('input', () => { if(st.sent || st.verified) reset(); });
+  return { reset, isVerified: email => st.verified && st.email === email, email: () => st.email };
+}
+
+/* 회원가입용 */
+const vSignup = makeVerifier({
+  purpose:'signup', screen:'signup',
+  emailInput:'suEmail', send:'suSend', box:'suBox', input:'suCode', check:'suCheck',
+   timer:'suTimer', demo:'suDemo', demoCode:'suDemoCode', ok:'suOk',
+  getEmail: () => $('suEmail').value.trim().toLowerCase(),
+  validate: async email => {
+    if(!EMAIL_RE.test(email)) return '이메일 형식이 올바르지 않습니다.';
+    if(await accounts.byEmail(email)) return '이미 가입된 이메일입니다.';
+    return null;
+  },
+  onVerified: () => { $('suStep2').classList.add('on'); updateSignupBtn(); },
+  onReset:    () => { $('suStep2').classList.remove('on'); updateSignupBtn(); }
+});
+/* 아이디 찾기용 */
+const vFindId = makeVerifier({
+  purpose:'findid', screen:'findid',
+  emailInput:'fiEmail', send:'fiSend', box:'fiBox', input:'fiCode', check:'fiCheck',
+   timer:'fiTimer', demo:'fiDemo', demoCode:'fiDemoCode', ok:'fiOk',
+  getEmail: () => $('fiEmail').value.trim().toLowerCase(),
+  validate: async email => {
+    if(!EMAIL_RE.test(email)) return '이메일 형식이 올바르지 않습니다.';
+    const acc = await accounts.byEmail(email);
+    if(!acc) return '그 이메일로 가입된 계정이 없습니다.';
+    flow.acc = acc;
+    return null;
+  },
+  onVerified: () => {
+    const acc = flow.acc;
+    $('foundId').textContent = maskId(acc.id);
+    $('foundWhen').textContent = `가입일 ${new Date(acc.created).toLocaleDateString('ko-KR')} · 전체 아이디는 ${acc.id.length}자입니다`;
+    show('idresult');
+  }
+});
+/* 비밀번호 찾기용 */
+const vFindPw = makeVerifier({
+  purpose:'findpw', screen:'findpw',
+  emailInput:'fpEmail', send:'fpSend', box:'fpBox', input:'fpCode', check:'fpCheck',
+   timer:'fpTimer', demo:'fpDemo', demoCode:'fpDemoCode', ok:'fpOk',
+  getEmail: () => $('fpEmail').value.trim().toLowerCase(),
+  validate: async email => {
+    const id = $('fpId').value.trim();
+    if(!id) return '아이디를 입력해 주세요.';
+    if(!EMAIL_RE.test(email)) return '이메일 형식이 올바르지 않습니다.';
+    const acc = accounts.byId(id);
+    const h = await sha256hex(EMAIL_PEPPER + email);
+    if(!acc || acc.emailHash !== h) return '아이디와 이메일이 일치하는 계정이 없습니다.';
+    flow.acc = acc; flow.id = acc.id; flow.email = email;
+    return null;
+  },
+  onVerified: () => {
+    $('npPw').value = ''; $('npPw2').value = ''; $('npRec').value = '';
+    show('newpw');
+  }
+});
+$('fpId').addEventListener('input', () => vFindPw.reset());
+
+/* ── 회원가입 ── */
+function updateSignupBtn(){
+  const id = $('suId').value.trim(), email = $('suEmail').value.trim().toLowerCase();
+  const pw = $('suPw').value, pw2 = $('suPw2').value;
+  const ready = ID_RE.test(id) && !accounts.byId(id) && vSignup.isVerified(email)
+             && pw.length >= 8 && pw === pw2 && $('suAgree').checked;
+  $('btnSignup').disabled = !ready;
+}
+['suId','suEmail','suPw','suPw2'].forEach(id => $(id).addEventListener('input', updateSignupBtn));
+$('suAgree').addEventListener('change', updateSignupBtn);
+
+$('goSignup').onclick = () => {
+  ['suId','suEmail','suPw','suPw2'].forEach(id => $(id).value = '');
+  $('suAgree').checked = false;
+  $('suIdHelp').textContent = '로그인에 사용합니다.'; $('suIdHelp').className = 'help';
+  $('suPw2Help').textContent = ''; $('suPwBar').style.width = '0';
+  vSignup.reset(); updateSignupBtn();
+  show('signup');
+};
+$('su2login').onclick = () => show('login');
+
+$('btnSignup').onclick = async () => {
+  const id = $('suId').value.trim(), email = $('suEmail').value.trim().toLowerCase();
+  const pw = $('suPw').value, pw2 = $('suPw2').value;
+  if(!ID_RE.test(id))       return fail('signup','아이디는 영문·숫자·밑줄 4~20자여야 합니다.');
+  if(accounts.byId(id))     return fail('signup','이미 사용 중인 아이디입니다.');
+  if(!vSignup.isVerified(email)) return fail('signup','이메일 인증을 먼저 완료해 주세요.');
+  if(pw.length < 8)         return fail('signup','비밀번호는 8자 이상이어야 합니다.');
+  if(pw !== pw2)            return fail('signup','두 비밀번호가 서로 다릅니다.');
+  if(!$('suAgree').checked) return fail('signup','필수 항목에 동의해 주세요.');
+  $('btnSignup').disabled = true; $('btnSignup').textContent = '계정을 만드는 중…';
+  try{
+    // 이전 버전에 남아 있던 기록이 있으면 이어받는다
+    const v1 = ls.get(OLD1);
+    const scans = Array.isArray(v1) && v1.length ? v1 : [];
+    const {rec} = await createAccount({id, email, pw, scans});
+    ls.del(OLD1);
+    flow.id = id;
+    $('suPw').value = ''; $('suPw2').value = '';     // 메모리·화면에서 비밀번호 제거
+    $('recKey').textContent = rec;
+    $('recSaved').checked = false;
+    show('recovery');
+  }catch(e){ fail('signup', e.message || '가입에 실패했습니다.'); }
+  finally{ $('btnSignup').disabled = false; $('btnSignup').textContent = '회원가입 완료'; }
+};
+
+/* ── 복구 키 ── */
+$('copyRec').onclick = async e => {
+  try{ await navigator.clipboard.writeText($('recKey').textContent); e.target.textContent = '복사했습니다'; }
+  catch(err){ e.target.textContent = '복사할 수 없습니다'; }
+  setTimeout(()=>e.target.textContent='복사', 1600);
+};
+$('dlRec').onclick = () => {
+  const txt = `뇌 MRI 읽어주기 — 복구 키\n아이디: ${flow.id}\n복구 키: ${$('recKey').textContent}\n발급일: ${new Date().toLocaleString('ko-KR')}\n\n이 키는 비밀번호를 잊었을 때 검사 기록을 되살리는 유일한 수단입니다.\n안전한 곳에 보관하세요.`;
+  const url = URL.createObjectURL(new Blob([txt], {type:'text/plain;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'mri-reader-복구키.txt'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+};
+$('btnRecDone').onclick = async () => {
+  if(!$('recSaved').checked) return alert('복구 키를 보관했는지 확인해 주세요.');
+  $('recKey').textContent = '';
+  $('loginId').value = flow.id; $('loginPw').value = '';
+  flow.id = ''; flow.email = '';
+  show('login');
+  $('ok-login').textContent = '가입이 완료되었습니다. 방금 만든 비밀번호로 로그인하세요.';
+  $('ok-login').hidden = false;
+};
+
+/* ── 로그인 ── */
+function attempts(){ return ls.get(LKEY) || {n:0, until:0}; }
+$('btnLogin').onclick = async () => {
+  const who = $('loginId').value.trim(), pw = $('loginPw').value;
+  $('ok-login').hidden = true;
+  if(!who || !pw) return fail('login','아이디와 비밀번호를 입력해 주세요.');
+  const at = attempts();
+  if(at.until > Date.now())
+    return fail('login', `로그인 시도가 너무 많습니다. ${Math.ceil((at.until-Date.now())/1000)}초 뒤에 다시 시도하세요.`);
+
+  $('btnLogin').disabled = true; $('btnLogin').textContent = '확인 중…';
+  try{
+    const acc = who.includes('@') ? await accounts.byEmail(who) : accounts.byId(who);
+    if(!acc) throw new Error('mismatch');
+    const {raw, key} = await unlockWithPw(acc, pw);       // 틀리면 예외
+    const data = await unseal(key, acc.data);
+    S.acc = acc; S.masterRaw = raw; S.masterKey = key;
+    S.email = data.email || ''; S.scans = data.scans || []; S.guest = false;
+    ls.del(LKEY);
+    $('loginPw').value = '';
+    enterApp();
+  }catch(err){
+    const n = at.n + 1;
+    ls.set(LKEY, {n, until: n >= 5 ? Date.now() + Math.min(300, Math.pow(2, n-4)*15)*1000 : 0});
+    fail('login', '아이디 또는 비밀번호가 맞지 않습니다.' + (n>=5 ? ' 잠시 후 다시 시도해 주세요.' : ''));
+  }finally{
+    $('btnLogin').disabled = false; $('btnLogin').textContent = '로그인';
+  }
+};
+['loginId','loginPw'].forEach(id => $(id).addEventListener('keydown', e=>{ if(e.key==='Enter') $('btnLogin').click(); }));
+$('goGuest').onclick = () => { S.guest = true; S.scans = []; enterApp(); };
+
+/* ── 아이디 찾기 ── */
+$('goFindId').onclick = () => { $('fiEmail').value=''; vFindId.reset(); show('findid'); };
+$('fi2login').onclick = () => show('login');
+$('btnIdDone').onclick = () => { $('loginId').value=''; show('login'); };
+
+/* ── 비밀번호 찾기 ── */
+$('goFindPw').onclick = () => { $('fpId').value=''; $('fpEmail').value=''; vFindPw.reset(); show('findpw'); };
+$('fp2login').onclick = () => show('login');
+$('np2login').onclick = () => show('login');
+$('btnNewPw').onclick = async () => {
+  const pw = $('npPw').value, pw2 = $('npPw2').value, rec = $('npRec').value.trim();
+  if(pw.length < 8) return fail('newpw','비밀번호는 8자 이상이어야 합니다.');
+  if(pw !== pw2)    return fail('newpw','두 비밀번호가 서로 다릅니다.');
+  const acc = flow.acc;
+  $('btnNewPw').disabled = true;
+  try{
+    let masterRaw = null, keptRecords = false;
+    if(rec){
+      try{
+        const u = await unlockWithRec(acc, rec);
+        masterRaw = u.raw; keptRecords = true;
+      }catch(e){ return fail('newpw','복구 키가 맞지 않습니다. 다시 확인하거나 비워 두고 진행하세요.'); }
+    }
+    if(!masterRaw){
+      if(!confirm('복구 키 없이 진행하면 저장된 회차 기록이 모두 삭제됩니다.\n계속할까요?')) return;
+      masterRaw = crypto.getRandomValues(new Uint8Array(32));
+      const mKey = await importMaster(masterRaw);
+      acc.data = await seal(mKey, {email: flow.email, scans: []});
+      await rewrapRecovery(acc, masterRaw);     // 마스터가 바뀌었으므로 복구 키도 새로 발급
+    }
+    await rewrapPassword(acc, masterRaw, pw);
+    accounts.put(acc);
+    ls.del(LKEY);
+    show('login');
+    $('loginId').value = acc.id;
+    $('ok-login').textContent = keptRecords
+      ? '비밀번호를 변경했습니다. 검사 기록은 그대로 유지됩니다.'
+      : '비밀번호를 변경했습니다. 복구 키가 없어 이전 회차 기록은 삭제되었고, 복구 키도 새로 발급되었습니다(계정 메뉴에서 확인).';
+    $('ok-login').hidden = false;
+  }catch(e){ fail('newpw','변경에 실패했습니다.'); }
+  finally{ $('btnNewPw').disabled = false; }
+};
+
+/* ── 비밀번호 변경(로그인 상태) ── */
+$('cp2app').onclick = () => { $('gate').hidden = true; $('app').hidden = false; };
+$('btnChPw').onclick = async () => {
+  const oldPw = $('cpOld').value, np = $('cpNew').value, np2 = $('cpNew2').value;
+  if(np.length < 8) return fail('chpw','새 비밀번호는 8자 이상이어야 합니다.');
+  if(np !== np2)    return fail('chpw','두 비밀번호가 서로 다릅니다.');
+  try{
+    const u = await unlockWithPw(S.acc, oldPw);
+    await rewrapPassword(S.acc, u.raw, np);
+    accounts.put(S.acc);
+    $('cpOld').value = $('cpNew').value = $('cpNew2').value = '';
+    $('gate').hidden = true; $('app').hidden = false;
+    alert('비밀번호를 변경했습니다. 복구 키는 그대로 사용할 수 있습니다.');
+  }catch(e){ fail('chpw','현재 비밀번호가 맞지 않습니다.'); }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   L. 앱 진입 · 잠금
+   ═══════════════════════════════════════════════════════════ */
+async function saveVault(){
+  if(S.guest || !S.masterKey || !S.acc) return true;
+  try{
+    S.acc.data = await seal(S.masterKey, {email:S.email, scans:S.scans});
+    return accounts.put(S.acc);
+  }catch(e){ return false; }
+}
+function enterApp(){
+  $('gate').hidden = true; $('app').hidden = false;
+  $('who').innerHTML = S.guest ? '둘러보기 모드' : `<b>${esc(S.acc.id)}</b>님`;
+  $('acctBtn').hidden = S.guest;
+  $('lockBtn').textContent = S.guest ? '나가기' : '로그아웃';
+  $('secMode').textContent = S.guest
+    ? '지금은 둘러보기 모드라 아무것도 저장되지 않습니다.'
+    : '로그아웃하면 이 기기에서도 내용을 읽을 수 없습니다.';
+  $('tlHint').textContent = S.guest ? '둘러보기 모드 — 저장 기능 꺼짐' : '암호화되어 이 기기에만 저장됩니다 · 최대 8회';
+  $('saveScan').disabled = S.guest || !S.analysis;
+  renderTimeline();
+  resetIdle();
+  if(!S.img) loadCanvas(makeSample(7), 'SERIES SAMPLE-AX-T2');
+}
+function logout(){
+  S.acc = null; S.masterRaw = null; S.masterKey = null; S.email = '';
+  S.scans = []; S.img = null; S.src = null; S.analysis = null; S.regions = []; S.guest = false;
+  flow.purpose = null; flow.id = ''; flow.email = ''; flow.pw = ''; flow.acc = null;
+  try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
+  ctx.clearRect(0,0,cv.width,cv.height);
+  $('emptyState').hidden = false; $('orient').hidden = true;
+  $('report').innerHTML = ''; $('findings').innerHTML = ''; $('probsWrap').hidden = true;
+  $('checkBox').hidden = true; $('tlScroll').innerHTML = ''; $('vTitle').textContent = '';
+  $('acct').hidden = true; $('a11y').hidden = true;
+  $('loginPw').value = '';
+  show('login');
+}
+let idleTimer = null;
+function resetIdle(){
+  clearTimeout(idleTimer);
+  if($('app').hidden || S.guest) return;
+  idleTimer = setTimeout(logout, 10*60*1000);
+}
+['pointerdown','keydown','wheel','touchstart'].forEach(ev => window.addEventListener(ev, resetIdle, {passive:true}));
+
+$('lockBtn').onclick = logout;
+$('acctBtn').onclick = () => {
+  const open = $('acct').hidden;
+  $('acct').hidden = !open; $('a11y').hidden = true;
+  if(open && S.acc) $('acctState').textContent = `${S.acc.id} · ${S.acc.emailMask} · 가입 ${new Date(S.acc.created).toLocaleDateString('ko-KR')}`;
+};
+$('chPwBtn').onclick = () => { $('acct').hidden = true; show('chpw'); };
+$('newRecBtn').onclick = async () => {
+  if(!S.acc || !S.masterRaw) return;
+  if(!confirm('복구 키를 새로 발급하면 이전 복구 키는 쓸 수 없게 됩니다. 계속할까요?')) return;
+  const rec = await rewrapRecovery(S.acc, S.masterRaw);
+  accounts.put(S.acc);
+  flow.id = S.acc.id;
+  $('recKey').textContent = rec; $('recSaved').checked = false;
+  $('acct').hidden = true;
+  show('recovery');
+  $('btnRecDone').textContent = '앱으로 돌아가기';
+  $('btnRecDone').onclick = () => {
+    if(!$('recSaved').checked) return alert('복구 키를 보관했는지 확인해 주세요.');
+    $('recKey').textContent = '';
+    $('gate').hidden = true; $('app').hidden = false;
+  };
+};
+$('delAcct').onclick = () => {
+  if(!S.acc) return;
+  if(!confirm('계정과 저장된 모든 회차 기록을 이 기기에서 완전히 지웁니다.\n되돌릴 수 없습니다. 계속할까요?')) return;
+  accounts.remove(S.acc.id);
+  ls.del(LKEY);
+  alert('삭제했습니다.');
+  logout();
+};
+
+/* ═══════════════════════════════════════════════════════════
+   M. 앱 이벤트
+   ═══════════════════════════════════════════════════════════ */
+$('pickBtn').onclick = () => $('fileIn').click();
+$('fileIn').onchange = e => { loadFile(e.target.files[0]); e.target.value=''; };
+$('sampleBtn').onclick = () => loadCanvas(makeSample(Date.now()%9973), 'SERIES SAMPLE-AX-T2');
+
+const film = $('film');
+['dragenter','dragover'].forEach(t => film.addEventListener(t, e=>{ e.preventDefault(); film.classList.add('drag'); }));
+['dragleave','drop'].forEach(t => film.addEventListener(t, e=>{ e.preventDefault(); film.classList.remove('drag'); }));
+film.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+$('alpha').oninput = e => { S.alpha = e.target.value/100; draw(); };
+$('ovBtn').onclick = e => {
+  S.overlay = !S.overlay;
+  e.target.setAttribute('aria-pressed', String(S.overlay));
+  e.target.textContent = S.overlay ? '표시 켜짐' : '표시 꺼짐';
+  draw();
+};
+document.querySelectorAll('[role=tab]').forEach(t => t.onclick = () => {
+  document.querySelectorAll('[role=tab]').forEach(o=>{
+    const on = o===t; o.setAttribute('aria-selected', String(on));
+    $(o.getAttribute('aria-controls')).hidden = !on;
+  });
+});
+$('report').addEventListener('click', e => {
+  const b = e.target.closest('.term'); if(!b) return;
+  $('tab-g').click();
+  renderGlossary(b.dataset.term);
+  const el = $('g-'+b.dataset.term); if(el) el.scrollIntoView({block:'center', behavior:'smooth'});
+});
+$('againBtn').onclick = () => {
+  S.simple = true; renderAll();
+  $('checkMsg').hidden = false;
+  $('checkMsg').textContent = '더 쉬운 말로 다시 적었습니다. 그래도 막히는 낱말이 있으면 밑줄 친 부분을 눌러보세요.';
+};
+$('okBtn').onclick = () => {
+  $('checkMsg').hidden = false;
+  $('checkMsg').textContent = '좋습니다. 이제 "의사에게 할 질문" 탭을 열어 진료 전에 복사해 두세요.';
+};
+
+let rate = 1;
+$('ttsRate').oninput = e => { rate = +e.target.value; $('ttsRateVal').textContent = rate.toFixed(1)+'×'; };
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g,''));
+  u.lang = 'ko-KR'; u.rate = rate;
+  const v = speechSynthesis.getVoices().find(x=>x.lang && x.lang.startsWith('ko'));
+  if(v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+$('ttsBtn').onclick = () => {
+  if(speechSynthesis.speaking){ speechSynthesis.cancel(); return; }
+  speak($('vTitle').textContent + '. ' + $('report').innerText);
+};
+$('ttsQ').onclick = () => {
+  if(speechSynthesis.speaking){ speechSynthesis.cancel(); return; }
+  speak('의사에게 물어볼 질문입니다. ' + [...$('questions').querySelectorAll('li')].map((l,i)=>`${i+1}번. ${l.textContent}`).join(' '));
+};
+$('copyQ').onclick = async e => {
+  const txt = [...$('questions').querySelectorAll('li')].map((l,i)=>`${i+1}. ${l.textContent}`).join('\n');
+  try{ await navigator.clipboard.writeText(txt); e.target.textContent='복사했습니다'; }
+  catch(err){ e.target.textContent='복사할 수 없습니다'; }
+  setTimeout(()=>e.target.textContent='질문 복사하기', 1800);
+};
+
+$('saveScan').onclick = async () => {
+  if(!S.analysis || S.guest) return;
+  S.scans.push({
+    date: new Date().toLocaleString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}),
+    thumb: thumbOf(S.src, 200),
+    regions: S.regions.map(r=>({nx:r.nx, ny:r.ny, r:r.r, area:r.area, status:r.status, name:r.name})),
+    probs: S.analysis.probs,
+    cost: +($('cost').value || 0)
+  });
+  if(S.scans.length > 8) S.scans.shift();
+  const ok = await saveVault();
+  if(!ok){ S.scans.pop(); alert('저장 공간이 부족해 기록하지 못했습니다. 오래된 회차를 지운 뒤 다시 시도해 주세요.'); return; }
+  renderTimeline();
+  $('cost').value = '';
+  $('scanLabel').textContent = `${S.scans.length}차로 저장됨`;
+  $('saveScan').disabled = true;
+};
+$('tlScroll').addEventListener('click', e => {
+  const c = e.target.closest('.tlcard'); if(!c) return;
+  const s = S.scans[+c.dataset.i]; if(!s) return;
+  const im = new Image();
+  im.onload = () => {
+    S.img = im; S.regions = s.regions;
+    S.analysis = {probs:s.probs, regions:s.regions, quality:'저장본'};
+    S.compared = true;
+    $('emptyState').hidden = true; $('orient').hidden = false;
+    $('fbSeries').textContent = `SERIES 저장본 #${+c.dataset.i+1}`;
+    $('fbSize').textContent = `${im.width} × ${im.height}`;
+    S.regions.forEach(r=>{ if(!r.change) r.change='저장된 기록'; if(!r.conf) r.conf=.5; });
+    renderAll();
+    document.querySelectorAll('.tlcard').forEach(x=>x.setAttribute('aria-current', String(x===c)));
+  };
+  im.src = s.thumb;
+});
+$('clearScans').onclick = async () => {
+  if(!S.scans.length) return;
+  if(!confirm('저장된 회차 기록을 모두 지웁니다. 되돌릴 수 없습니다.')) return;
+  S.scans = []; await saveVault(); renderTimeline();
+};
+
+$('a11yBtn').onclick = e => {
+  const open = $('a11y').hidden;
+  $('a11y').hidden = !open; $('acct').hidden = true;
+  e.target.setAttribute('aria-pressed', String(open));
+};
+$('fsSet').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(o=>o.setAttribute('aria-pressed', String(o===b)));
+  document.documentElement.style.setProperty('--fs', b.dataset.fs);
+  requestAnimationFrame(draw);
+};
+$('cvdSet').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(o=>o.setAttribute('aria-pressed', String(o===b)));
+  document.documentElement.setAttribute('data-cvd', b.dataset.cvd);
+  draw();
+};
+
+/* ═══════════════════════════════════════════════════════════
+   N. 시작
+   ═══════════════════════════════════════════════════════════ */
+renderGlossary();
+$('engineBadge').textContent = '엔진 · ' + ENGINE.name;
+$('backendBadge').textContent = AuthBackend.mode === 'demo' ? '데모 인증' : '서버 인증';
+if(!SUBTLE){
+  $('scr-login').innerHTML = '<h2>안전하게 저장할 수 없는 환경입니다</h2>'
+    + '<p class="lede">이 브라우저에서는 암호화 기능(Web Crypto)을 쓸 수 없어 계정 기능을 켜지 않습니다. 분석 기능만 사용할 수 있습니다.</p>'
+    + '<button class="btn primary full" id="goGuest2">저장 없이 사용하기</button>';
+  $('goGuest2').onclick = () => { S.guest = true; enterApp(); };
+  show('login');
+} else {
+  show('login');
+  if(Object.keys(accounts.all()).length === 0 && ls.get(OLD2)){
+    $('ok-login').textContent = '이전 버전의 잠금 데이터가 있습니다. 회원가입을 하면 새 계정 방식으로 전환됩니다.';
+    $('ok-login').hidden = false;
+  }
+}
+</script>
+</body>
+</html>
