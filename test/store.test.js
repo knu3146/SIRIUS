@@ -18,6 +18,14 @@ function storage() {
   return { data, context, accounts: vm.runInContext('accounts', context) };
 }
 
+test('개인정보 보호 모드에서는 계정 생성과 저장이 시작되지 않는다', async () => {
+  const {data,context} = storage();
+  context.CONFIG = {privacy:true};
+  const create = vm.runInContext('createAccount', context);
+  await assert.rejects(create({id:'demo_user',email:'fake@example.com'}), /계정을 만들지 않습니다/);
+  assert.equal(data.size,0);
+});
+
 test('내장 객체 이름이 등록된 계정으로 오인되지 않는다', () => {
   const { accounts } = storage();
   assert.equal(accounts.byId('constructor'), null);

@@ -122,12 +122,17 @@ function serveStatic(req, res, pathname){
   rel = path.normalize(rel).replace(/^(\.\.[\\/])+/, '');
   if(rel.split(/[\\/]/).some(segment => segment.startsWith('.')) || BLOCKED.some(re => re.test(rel)))
     return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
+  // Serve a fixed application surface, never arbitrary files added to the workspace.
+  if(rel !== 'index.html' && !/^(?:js[\\/][A-Za-z0-9_-]+\.js|css[\\/]style\.css)$/.test(rel))
+    return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
 
   const file = path.join(ROOT, rel);
   if(!file.startsWith(ROOT + path.sep) && file !== ROOT)
     return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
   if(!fs.existsSync(file) || !fs.statSync(file).isFile())
     return send(res, 404, 'text/plain; charset=utf-8', '없는 파일입니다: /' + rel);
+  if(fs.realpathSync(file) !== path.resolve(file))
+    return send(res, 403, 'text/plain; charset=utf-8', '접근할 수 없는 경로입니다.');
 
   res.writeHead(200, {
     'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
@@ -158,6 +163,10 @@ const ROUTES = {
   '/api/register':    './api/register.js'
 };
 async function serveApi(req, res, modPath){
+  if(process.env.ENABLE_EMAIL_AUTH !== 'true'){
+    req.resume();
+    return send(res, 403, 'application/json; charset=utf-8', '{"error":"개인정보 보호 모드에서는 서버 계정·이메일 기능을 사용하지 않습니다."}');
+  }
   const chunks = [];
   let size = 0;
   for await (const c of req){
@@ -178,7 +187,7 @@ async function serveApi(req, res, modPath){
     const mod = await import(modPath);
     await mod.default(req, res);
   }catch(e){
-    console.error('API 오류:', e.message);
+    console.error('API request failed');
     if(!res.headersSent) res.status(500).json({error:'서버 내부 오류'});
   }
 }
@@ -232,15 +241,28 @@ refuseHardcodedKey();
 loadEnv();
 ensureEnvFile();
 
-const mailReady = Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
+const mailReady = process.env.ENABLE_EMAIL_AUTH === 'true' && Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
                           (process.env.RESEND_API_KEY && process.env.MAIL_FROM));
 
 const server = http.createServer(async (req, res) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'; object-src 'none'");
+  const hosts = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+  if(!hosts.has(req.headers.host)) return send(res, 403, 'text/plain', 'Forbidden');
+  if(req.headers['sec-fetch-site'] === 'cross-site') return send(res, 403, 'text/plain', 'Forbidden');
+  if(req.headers.origin){
+    let allowed = false;
+    try { const origin = new URL(req.headers.origin); allowed = origin.protocol === 'http:' && origin.host === req.headers.host; } catch {}
+    if(!allowed) return send(res, 403, 'text/plain', 'Forbidden');
+  }
   const { pathname } = new URL(req.url, 'http://localhost');
 
   if(pathname === '/api/health'){
     return send(res, 200, 'application/json; charset=utf-8',
-      JSON.stringify({ ok:true, mail: Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
+      JSON.stringify({ ok:true, mail: process.env.ENABLE_EMAIL_AUTH === 'true' && Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
                                               (process.env.RESEND_API_KEY && process.env.MAIL_FROM)) }));
   }
   if(pathname === '/api/analyze') return serveAnalyze(req, res);

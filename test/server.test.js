@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import net from 'node:net';
+import { get as httpGet } from 'node:http';
 
 test('로컬 서버: 화면, 상태, 비공개 경로, 잘못된 URL, 분석 요청 검증', async () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,12 +39,26 @@ test('로컬 서버: 화면, 상태, 비공개 경로, 잘못된 URL, 분석 요
     assert.ok(ready, logs);
     assert.deepEqual(await (await fetch(`${base}/api/health`)).json(), { ok: true, mail: false });
     assert.equal((await fetch(base)).status, 200);
+    const page = await fetch(base);
+    assert.equal(page.headers.get('Referrer-Policy'), 'no-referrer');
+    assert.equal(page.headers.get('X-Frame-Options'), 'DENY');
+    assert.match(page.headers.get('Content-Security-Policy'), /frame-ancestors 'none'/);
+    await writeFile(path.join(dir, 'private-patient-export.json'), '{"private":true}');
+    assert.equal((await fetch(`${base}/private-patient-export.json`)).status, 403);
+    const foreignHost = await new Promise((resolve,reject) => {
+      httpGet(base, {headers:{Host:`attacker.example:${port}`}}, response => {
+        response.resume(); resolve(response.statusCode);
+      }).on('error',reject);
+    });
+    assert.equal(foreignHost, 403);
+    assert.equal((await fetch(`${base}/api/health`, {headers:{Origin:'https://attacker.example'}})).status, 403);
+    assert.equal((await fetch(`${base}/api/register`, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status, 403);
     for (const route of ['/.env.local', '/ml/model_rf.joblib', '/data/registry.json', '/train/neuria_train.ipynb', '/.venv/pyvenv.cfg', '/.cache-models/weights.pth', '/datasets/example.jpg']) {
       assert.equal((await fetch(base + route)).status, 403, route);
     }
     assert.equal((await fetch(`${base}/%ZZ`)).status, 400);
     assert.equal((await fetch(`${base}/api/health`)).status, 200);
-    assert.equal((await fetch(`${base}/api/check-id`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(20 * 1024) })).status, 413);
+    assert.equal((await fetch(`${base}/api/check-id`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(20 * 1024) })).status, 403);
     assert.equal((await fetch(`${base}/api/analyze`)).status, 405);
     assert.equal((await fetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'x' })).status, 415);
     assert.equal((await fetch(`${base}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'image/png', Origin: 'https://example.com' }, body: 'x' })).status, 403);

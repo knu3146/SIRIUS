@@ -7,6 +7,14 @@ const context = vm.createContext({});
 vm.runInContext(readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8'), context);
 const validate = vm.runInContext('validateModelResponse', context);
 
+test('개인정보 보호 모드는 원격 사이트에서 MRI 전송과 캔버스 접근 전에 차단한다', async () => {
+  const isolated = vm.createContext({CONFIG:{privacy:true}, location:{hostname:'remote.example'},
+    fetch(){throw new Error('network must not run');}});
+  vm.runInContext(readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8'), isolated);
+  const analyze = vm.runInContext('modelAnalyze', isolated);
+  await assert.rejects(analyze({}), /이 컴퓨터의 분석 서버/);
+});
+
 test('모델 응답은 네 클래스의 유효한 확률 분포여야 한다', () => {
   for (const probs of [[0, 0, 0, 0], [-.1, .3, .4, .4], [2, 0, 0, 0], [.2, .2, .2, .2], [NaN, .2, .3, .5], [.5, .5]]) {
     assert.throws(() => validate({ probs, regions: [] }));

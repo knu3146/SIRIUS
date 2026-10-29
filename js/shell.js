@@ -58,18 +58,19 @@ function showLanding(){
 }
 function showAuth(){ $('landing').hidden = true; }   // show() 가 gate 를 띄웁니다
 
-$('toLoginTop').onclick  = () => { showAuth(); show('login'); };
+$('toLoginTop').onclick  = () => { if(CONFIG.privacy) return enterGuest('analyze'); showAuth(); show('login'); };
 $('toSignupTop').onclick = () => { showAuth(); $('goSignup').click(); };
 $('authHome').onclick    = showLanding;
 
 /* 가입 없이 둘러보는 진입점 */
 function enterGuest(page){
+  if(S.acc || S.img) logout();
   S.guest = true; S.scans = [];
   $('landing').hidden = true;
   enterApp();
   if(page) go(page);
 }
-$('heroStart').onclick = () => { showAuth(); show('login'); };
+$('heroStart').onclick = () => { if(CONFIG.privacy) return enterGuest('analyze'); showAuth(); show('login'); };
 document.querySelectorAll('[data-landing]').forEach(b => b.onclick = () => {
   const to = b.dataset.landing;
   if(to === 'about'){
@@ -86,7 +87,7 @@ const PAGE_TITLE = {
   guide:'사용 가이드', faq:'자주 묻는 질문', mypage:'마이페이지'
 };
 /* 로그인 없이 볼 수 있는 페이지 — 도움말뿐입니다 */
-const GUEST_OK = {guide:true, faq:true};
+const GUEST_OK = {guide:true, faq:true, analyze:true, result:true};
 /* '분석하기' + 는 / '분석 결과' + 은 — 받침에 맞는 조사를 고릅니다 */
 function josa(word, withJong, noJong){
   const c = String(word).trim().slice(-1).charCodeAt(0);
@@ -94,6 +95,7 @@ function josa(word, withJong, noJong){
   return (c - 0xAC00) % 28 ? withJong : noJong;
 }
 function requireLogin(page){
+  if(CONFIG.privacy) { $('secMode').textContent = '개인정보 보호 모드에서는 계정과 기록을 저장하지 않습니다.'; return; }
   show('login');
   const nm = PAGE_TITLE[page];
   const el = $('ok-login');

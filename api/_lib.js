@@ -8,6 +8,7 @@ export const PURPOSES = {
   findpw: '비밀번호 재설정'
 };
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+export const authEnabled = () => process.env.ENABLE_EMAIL_AUTH === 'true';
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // 0/O/1/I/L 제외
 const TTL_MS = 10 * 60 * 1000;
 
@@ -70,7 +71,7 @@ export const clientIp = req =>
 /* 메일 발송 — Resend REST API (외부 패키지 없이 fetch만 사용) */
 /* 메일 설정이 되어 있는지 — Gmail 또는 Resend 중 하나면 됩니다 */
 export const mailConfigured = () =>
-  Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
+  authEnabled() && Boolean((process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) ||
           (process.env.RESEND_API_KEY && process.env.MAIL_FROM));
 
 function buildMessage(code, purpose){
@@ -101,6 +102,7 @@ const fail = code => { const e = new Error(code); e.code = code; return e; };
    없으면 RESEND_API_KEY + MAIL_FROM 으로 Resend 사용
    ───────────────────────────────────────────────────────── */
 export async function sendMail(to, code, purpose){
+  if(process.env.ENABLE_EMAIL_AUTH !== 'true') throw fail('MAIL_DISABLED');
   const msg = buildMessage(code, purpose);
   if(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) return sendViaGmail(to, msg);
   if(process.env.RESEND_API_KEY && process.env.MAIL_FROM)      return sendViaResend(to, msg);
@@ -128,7 +130,7 @@ async function sendViaGmail(to, {subject, html, text}){
   try{
     await transport.sendMail({ from: `뇌 MRI 읽어주기 <${user}>`, to, subject, html, text });
   }catch(e){
-    console.error('gmail send failed', e.responseCode || '', e.message);   // 인증번호는 로그에 남기지 않습니다
+    console.error('gmail send failed');
     if(e.responseCode === 535 || /Username and Password not accepted|BadCredentials|Invalid login/i.test(e.message || ''))
       throw fail('GMAIL_AUTH');
     if(e.responseCode === 550 || /Daily user sending (limit|quota) exceeded/i.test(e.message || ''))
@@ -145,7 +147,7 @@ async function sendViaResend(to, {subject, html, text}){
   });
   if(r.ok) return;
   const body = await r.text().catch(() => '');
-  console.error('resend failed', r.status, body);      // 인증번호는 로그에 남기지 않습니다
+  console.error('resend failed', r.status);
 
   // 도메인 인증 전 테스트 발신 주소(onboarding@resend.dev)는
   // Resend 계정 본인 이메일로만 보낼 수 있습니다.

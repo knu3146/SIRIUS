@@ -271,6 +271,7 @@ $('suAgreeBox').addEventListener('click', e => {
 });
 
 $('goSignup').onclick = () => {
+  if(CONFIG.privacy) return enterGuest('analyze');
   ['suName','suId','suEmail','suPw','suPw2'].forEach(id => $(id).value = '');
   resetAgree();
   $('suIdHelp').textContent = '로그인에 사용합니다.'; $('suIdHelp').className = 'help';
@@ -283,6 +284,7 @@ $('goSignup').onclick = () => {
 $('su2login').onclick = () => show('login');
 
 $('btnSignup').onclick = async () => {
+  if(CONFIG.privacy) return enterGuest('analyze');
   const id = $('suId').value.trim(), email = $('suEmail').value.trim().toLowerCase();
   const pw = $('suPw').value, pw2 = $('suPw2').value;
   if(!ID_RE.test(id))       return fail('signup','아이디는 영문·숫자·밑줄 4~20자여야 합니다.');
@@ -448,7 +450,7 @@ $('lgCheck').onclick = async () => {
   }catch(e){ $('lgCheck').disabled = false; fail('login', e.message); }
 };
 ['loginId','loginPw'].forEach(id => $(id).addEventListener('keydown', e=>{ if(e.key==='Enter') $('btnLogin').click(); }));
-$('goGuest').onclick = () => { S.guest = true; S.scans = []; enterApp(); };
+$('goGuest').onclick = () => enterGuest('analyze');
 
 /* ── 아이디 찾기 ── */
 $('goFindId').onclick = () => { $('fiEmail').value=''; vFindId.reset(); show('findid'); };

@@ -149,6 +149,10 @@ python ml/audit_candidate.py --dataset datasets/new-candidate --references datas
 
 후보 유사 이미지 그룹 전체가 기존 자료에 연결되는지도 확인한다. 이미지별 경로·해시가 들어간 전체 감사 파일과 원본 영상은 Git에 포함하지 않는다.
 
+## 개인정보 보호 기본값
+
+기본 실행은 이름·이메일 없이 분석하며 계정과 기록을 저장하지 않는다. 외부 메일 및 서버 계정 API는 기본 비활성화하고, 영상은 이 컴퓨터의 분석 서버에서만 처리한다. 영상에 찍힌 이름·환자번호는 자동으로 지워지지 않는다. 기존 계정의 보관 범위와 설정 변경 방법은 [개인정보 보호 동작](PRIVACY.md)을 확인한다. 변경 후에는 로컬 서버를 재시작하고 페이지를 새로고침한다.
+
 ## 자동 검사
 
 GitHub의 [Code checks](https://github.com/knu3146/SIRIUS/actions) 워크플로는 push와 pull request에서 JavaScript 문법·회귀 테스트 및 Python 테스트를 실행합니다. 실제 MRI 데이터나 학습된 가중치는 CI에 올리지 않으며, 모델의 임상 성능을 검증하는 검사도 아닙니다.

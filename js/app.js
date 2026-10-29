@@ -14,7 +14,7 @@ function enterApp(){
     b.classList.toggle('locked', locked);
     b.title = locked ? '로그인한 뒤에 쓸 수 있습니다' : '';
   });
-  if(typeof go === 'function') go(S.guest ? 'guide' : (S.img ? 'result' : 'analyze'));
+  if(typeof go === 'function') go(S.img ? 'result' : 'analyze');
   $('lockBtn').textContent = S.guest ? '나가기' : '로그아웃';
   $('secMode').textContent = S.guest
     ? '지금은 둘러보기 모드라 아무것도 저장되지 않습니다.'
@@ -36,7 +36,7 @@ function logout(){
   $('report').innerHTML = ''; $('findings').innerHTML = ''; $('probsWrap').hidden = true;
   $('checkBox').hidden = true; $('tlScroll').innerHTML = ''; $('vTitle').textContent = '';
   $('loginPw').value = '';
-  show('login');
+  if(typeof CONFIG !== 'undefined' && CONFIG.privacy) showLanding(); else show('login');
 }
 let idleTimer = null;
 function resetIdle(){

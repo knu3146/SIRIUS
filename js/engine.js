@@ -134,6 +134,8 @@ function validateModelResponse(j){
 }
 
 async function modelAnalyze(canvas){
+  if(typeof CONFIG !== 'undefined' && CONFIG.privacy && !['localhost','127.0.0.1','[::1]'].includes(globalThis.location?.hostname))
+    throw new Error('개인정보 보호 모드에서는 이 컴퓨터의 분석 서버만 사용할 수 있습니다.');
   const base = heuristicAnalyze(canvas);           // 화질 점검은 기존 계산을 그대로 사용
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
   if(!blob) throw new Error('이미지 변환 실패');

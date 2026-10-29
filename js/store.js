@@ -78,6 +78,7 @@ function maskId(id){
 
 /* 계정 생성 */
 async function createAccount({id, email, pw, scans, name}){
+  if(typeof CONFIG !== 'undefined' && CONFIG.privacy) throw new Error('개인정보 보호 모드에서는 계정을 만들지 않습니다.');
   const master = crypto.getRandomValues(new Uint8Array(32));
   const mKey = await importMaster(master);
   const pwSalt = crypto.getRandomValues(new Uint8Array(16));

@@ -34,6 +34,7 @@ const AuthBackend = {
   },
 
   async post(path, body){
+    if(typeof CONFIG !== 'undefined' && CONFIG.privacy) throw new Error('개인정보 보호 모드에서는 계정 정보를 전송하지 않습니다.');
     let res;
     try{
       res = await fetch(this.base + path, {

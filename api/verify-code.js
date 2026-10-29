@@ -4,8 +4,10 @@ import { PURPOSES, openTicket, sealTicket, emailHash, sameCode,
          tooMany, clientIp, readBody } from './_lib.js';
 
 const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
+import { authEnabled } from './_lib.js';
 
 export default async function handler(req, res){
+  if(!authEnabled()) return res.status(403).json({error:'서버 계정 기능이 비활성화되어 있습니다.'});
   if(req.method !== 'POST') return res.status(405).json({error:'POST 요청만 받습니다.'});
 
   const ip = clientIp(req);
